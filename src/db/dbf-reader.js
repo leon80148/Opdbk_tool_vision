@@ -18,7 +18,7 @@ class DBFReader {
     this.isPreloaded = false;
 
     // 定義需要預載入的表格（所有常用表格）
-    this.preloadTables = ['CO01M', 'CO02M', 'CO03M', 'CO05O', 'co05b'];
+    this.preloadTables = ['CO01M', 'CO02M', 'CO02F', 'CO03M', 'CO03L', 'co05b'];
 
     // 預載入資料範圍設定（只載入近期資料，減少記憶體占用）
     this.preloadYearsBack = config.performance?.preload_years_back || 3; // 預設載入最近 3 年
@@ -70,8 +70,9 @@ class DBFReader {
     // 定義每個表格的日期欄位
     const dateFields = {
       'CO02M': 'IDATE',
+      'CO02F': 'FDATE',
       'CO03M': 'IDATE',
-      'CO05O': 'TBKDATE',
+      'CO03L': 'DATE',
       'co05b': 'TBKDT'
       // CO01M 沒有日期欄位，載入全部
     };
@@ -332,18 +333,19 @@ class DBFReader {
       const birthStr = String(birthDate).trim();
 
       if (birthStr.length === 7) {
-        // 民國年格式：YYYMMDD
-        const rocYear = parseInt(birthStr.substring(0, 3));
+        // 民國年格式：YYYMMDD -> YYY/MM/DD (YYYY/MM/DD)
+        const rocYear = birthStr.substring(0, 3);
         const month = birthStr.substring(3, 5);
         const day = birthStr.substring(5, 7);
-        const adYear = rocYear + 1911;
-        return `${adYear}/${month}/${day} (民國${rocYear}年)`;
+        const adYear = parseInt(rocYear) + 1911;
+        return `${rocYear}/${month}/${day} (${adYear}/${month}/${day})`;
       } else if (birthStr.length === 8) {
-        // 西元年格式：YYYYMMDD
-        const year = birthStr.substring(0, 4);
+        // 西元年格式：YYYYMMDD -> 轉換為民國年
+        const year = parseInt(birthStr.substring(0, 4));
+        const rocYear = year - 1911;
         const month = birthStr.substring(4, 6);
         const day = birthStr.substring(6, 8);
-        return `${year}/${month}/${day}`;
+        return `${rocYear}/${month}/${day} (${year}/${month}/${day})`;
       }
 
       return null;
@@ -477,12 +479,12 @@ class DBFReader {
   }
 
   /**
-   * 合併查詢 CO05O 記錄（優化效能，避免重複讀取）
+   * 合併查詢 CO03L 看診紀錄（優化效能，避免重複讀取）
    * 一次讀取，同時返回就診歷史和預防保健記錄
    */
-  async queryCO05ORecords(patientId, visitHistoryLimit = 10) {
+  async queryCO03LRecords(patientId, visitHistoryLimit = 10) {
     try {
-      const records = await this.openAndReadDBF('CO05O');
+      const records = await this.openAndReadDBF('CO03L');
 
       // 定義預防保健卡序
       const preventiveCareCardSequences = [
@@ -506,30 +508,26 @@ class DBFReader {
         // 只處理該病患的記錄
         if (r.KCSTMR?.trim() !== patientId) continue;
 
-        // 檢查完診時間
-        const tendtime = r.TENDTIME?.trim() || '';
-        if (!tendtime || tendtime === '000000') continue;
-
-        const tisrs = r.TISRS?.trim() || '';
-        const recordDate = r.TBKDATE?.trim() || '';
+        const lisrs = r.LISRS?.trim() || '';
+        const recordDate = r.DATE?.trim() || '';
 
         // 判斷是否為預防保健記錄
-        if (tisrs && preventiveCareCardSequences.includes(tisrs)) {
+        if (lisrs && preventiveCareCardSequences.includes(lisrs)) {
           // 只保留五年內的預防保健記錄
           if (recordDate >= fiveYearsAgoStr) {
             preventiveCare.push(r);
           }
         }
 
-        // 所有有完診的記錄都加入就診歷史
+        // 所有記錄都加入就診歷史
         visitHistory.push(r);
       }
 
       // 排序函數（共用）
       const sortByDateTime = (a, b) => {
-        const dateCompare = (b.TBKDATE || '').localeCompare(a.TBKDATE || '');
+        const dateCompare = (b.DATE || '').localeCompare(a.DATE || '');
         if (dateCompare !== 0) return dateCompare;
-        return (b.TBKTIME || '').localeCompare(a.TBKTIME || '');
+        return (b.TIME || '').localeCompare(a.TIME || '');
       };
 
       // 排序並限制數量
@@ -541,12 +539,364 @@ class DBFReader {
         preventiveCare: preventiveCare
       };
     } catch (error) {
-      logger.error(`Failed to query CO05O records for patient ${patientId}:`, error);
+      logger.error(`Failed to query CO03L records for patient ${patientId}:`, error);
       return {
         visitHistory: [],
         preventiveCare: []
       };
     }
+  }
+
+  /**
+   * @deprecated 使用 queryCO03LRecords 取代
+   * 合併查詢 CO05O 掛號記錄（已棄用，保留以維持向後相容）
+   */
+  async queryCO05ORecords(patientId, visitHistoryLimit = 10) {
+    logger.warn('queryCO05ORecords is deprecated, use queryCO03LRecords instead');
+    return this.queryCO03LRecords(patientId, visitHistoryLimit);
+  }
+
+  /**
+   * 日期加減天數（民國年格式 YYYMMDD）
+   * @param {string} rocDateStr - 民國年日期字串 (YYYMMDD)
+   * @param {number} days - 要加的天數（可為負數）
+   * @returns {string} - 加減後的民國年日期字串
+   */
+  addDaysToROCDate(rocDateStr, days) {
+    try {
+      if (!rocDateStr || rocDateStr.length !== 7) return null;
+
+      // 轉換為西元年
+      const rocYear = parseInt(rocDateStr.substring(0, 3));
+      const month = parseInt(rocDateStr.substring(3, 5));
+      const day = parseInt(rocDateStr.substring(5, 7));
+
+      const date = new Date(rocYear + 1911, month - 1, day);
+
+      // 加天數
+      date.setDate(date.getDate() + days);
+
+      // 轉回民國年格式
+      const newRocYear = date.getFullYear() - 1911;
+      const newMonth = date.getMonth() + 1;
+      const newDay = date.getDate();
+
+      return String(newRocYear).padStart(3, '0') +
+             String(newMonth).padStart(2, '0') +
+             String(newDay).padStart(2, '0');
+    } catch (error) {
+      logger.error('Error adding days to ROC date:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 日期加減月數（民國年格式 YYYMMDD）
+   * @param {string} rocDateStr - 民國年日期字串 (YYYMMDD)
+   * @param {number} months - 要加的月數（可為負數）
+   * @returns {string} - 加減後的民國年日期字串
+   */
+  addMonthsToROCDate(rocDateStr, months) {
+    try {
+      if (!rocDateStr || rocDateStr.length !== 7) return null;
+
+      // 轉換為西元年
+      const rocYear = parseInt(rocDateStr.substring(0, 3));
+      const month = parseInt(rocDateStr.substring(3, 5));
+      const day = parseInt(rocDateStr.substring(5, 7));
+
+      const date = new Date(rocYear + 1911, month - 1, day);
+
+      // 加月數
+      date.setMonth(date.getMonth() + months);
+
+      // 轉回民國年格式
+      const newRocYear = date.getFullYear() - 1911;
+      const newMonth = date.getMonth() + 1;
+      const newDay = date.getDate();
+
+      return String(newRocYear).padStart(3, '0') +
+             String(newMonth).padStart(2, '0') +
+             String(newDay).padStart(2, '0');
+    } catch (error) {
+      logger.error('Error adding months to ROC date:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 查詢糖尿病管理記錄
+   * @param {string} patientId - 病歷號
+   * @returns {Array} - 糖尿病記錄列表
+   */
+  async queryDiabetesRecords(patientId) {
+    try {
+      const diabetesCodes = ['P1407C', 'P1408C', 'P1409C', 'P7001C', 'P7002C'];
+      const twoYearsAgo = this.addDaysToROCDate(this.getTodayROCDate(), -730); // 2年前
+
+      const records = await this.openAndReadDBF('CO02M');
+
+      const diabetesRecords = records
+        .filter(r => {
+          const kcstmr = r.KCSTMR?.trim();
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim() || '';
+
+          return kcstmr === patientId &&
+                 dno && diabetesCodes.includes(dno) &&
+                 idate >= twoYearsAgo;
+        })
+        .map(r => {
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim();
+
+          // 計算下次可執行日
+          let nextExecutableDate = null;
+          if (dno === 'P1407C') {
+            nextExecutableDate = this.addDaysToROCDate(idate, 50);
+          } else {
+            nextExecutableDate = this.addDaysToROCDate(idate, 71);
+          }
+
+          return {
+            date: idate,
+            code: dno,
+            codeName: this.getChronicDiseaseName(dno),
+            nextExecutableDate: nextExecutableDate
+          };
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '')); // 由新到舊
+
+      return diabetesRecords;
+    } catch (error) {
+      logger.error(`Failed to query diabetes records for patient ${patientId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 查詢腎臟病管理記錄
+   * @param {string} patientId - 病歷號
+   * @returns {Array} - 腎臟病記錄列表
+   */
+  async queryKidneyRecords(patientId) {
+    try {
+      const kidneyCodes = ['P4301C', 'P4302C'];
+      const twoYearsAgo = this.addDaysToROCDate(this.getTodayROCDate(), -730); // 2年前
+
+      const records = await this.openAndReadDBF('CO02M');
+
+      const kidneyRecords = records
+        .filter(r => {
+          const kcstmr = r.KCSTMR?.trim();
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim() || '';
+
+          return kcstmr === patientId &&
+                 dno && kidneyCodes.includes(dno) &&
+                 idate >= twoYearsAgo;
+        })
+        .map(r => {
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim();
+
+          // 計算下次可執行日
+          let nextExecutableDate = null;
+          if (dno === 'P4301C') {
+            nextExecutableDate = this.addDaysToROCDate(idate, 77);
+          } else if (dno === 'P4302C') {
+            nextExecutableDate = this.addDaysToROCDate(idate, 161);
+          }
+
+          return {
+            date: idate,
+            code: dno,
+            codeName: this.getChronicDiseaseName(dno),
+            nextExecutableDate: nextExecutableDate
+          };
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '')); // 由新到舊
+
+      return kidneyRecords;
+    } catch (error) {
+      logger.error(`Failed to query kidney records for patient ${patientId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 查詢代謝症候群管理記錄
+   * @param {string} patientId - 病歷號
+   * @returns {Array} - 代謝記錄列表
+   */
+  async queryMetabolicRecords(patientId) {
+    try {
+      const metabolicCodes = ['P7501C', 'P7502C', 'P7503C'];
+      const twoYearsAgo = this.addDaysToROCDate(this.getTodayROCDate(), -730); // 2年前
+
+      const records = await this.openAndReadDBF('CO02M');
+
+      const metabolicRecords = records
+        .filter(r => {
+          const kcstmr = r.KCSTMR?.trim();
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim() || '';
+
+          return kcstmr === patientId &&
+                 dno && metabolicCodes.includes(dno) &&
+                 idate >= twoYearsAgo;
+        })
+        .map(r => {
+          const dno = r.DNO?.trim();
+          const idate = r.IDATE?.trim();
+
+          // 統一加 71 天
+          const nextExecutableDate = this.addDaysToROCDate(idate, 71);
+
+          return {
+            date: idate,
+            code: dno,
+            codeName: this.getChronicDiseaseName(dno),
+            nextExecutableDate: nextExecutableDate
+          };
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '')); // 由新到舊
+
+      return metabolicRecords;
+    } catch (error) {
+      logger.error(`Failed to query metabolic records for patient ${patientId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 查詢3年內檢查記錄（結合 CO02M 和 CO02F）
+   * @param {string} patientId - 病歷號
+   * @returns {Object} - 各項檢查記錄
+   */
+  async queryExaminationRecords(patientId) {
+    try {
+      const threeYearsAgo = this.addDaysToROCDate(this.getTodayROCDate(), -1095); // 3年前
+
+      // 查詢 CO02M 的檢查記錄
+      const co02mRecords = await this.openAndReadDBF('CO02M');
+
+      // 查詢 CO02F 的報告內容
+      const co02fRecords = await this.openAndReadDBF('CO02F');
+
+      // 輔助函數：根據日期查找報告
+      const findReport = (date) => {
+        const report = co02fRecords.find(r =>
+          r.KCSTMR?.trim() === patientId &&
+          r.FDATE?.trim() === date
+        );
+        return report ? report.FTEXT?.trim() || '' : '';
+      };
+
+      // 定義檢查項目
+      const examinations = {
+        abdomen: { codes: ['19001C', '19009C'], name: '腹部超音波', interval: 6, unit: 'months' },
+        thyroid: { codes: ['19012C'], name: '甲狀腺超音波', interval: 6, unit: 'months' },
+        puncture: { codes: ['15021C'], name: '細針穿刺', interval: 1, unit: 'years' },
+        lung: { codes: ['17003C', '17006C'], name: '肺功能檢查', interval: 6, unit: 'months' },
+        urine: { codes: ['21004C'], name: '尿流速檢查', interval: 1, unit: 'years' }
+      };
+
+      const results = {};
+
+      for (const [key, exam] of Object.entries(examinations)) {
+        // 查找該檢查的最近記錄
+        const examRecords = co02mRecords
+          .filter(r => {
+            const kcstmr = r.KCSTMR?.trim();
+            const dno = r.DNO?.trim();
+            const idate = r.IDATE?.trim() || '';
+
+            return kcstmr === patientId &&
+                   dno && exam.codes.includes(dno) &&
+                   idate >= threeYearsAgo;
+          })
+          .sort((a, b) => (b.IDATE || '').localeCompare(a.IDATE || ''));
+
+        if (examRecords.length > 0) {
+          const latest = examRecords[0];
+          const examDate = latest.IDATE?.trim();
+          const examCode = latest.DNO?.trim();
+
+          // 計算建議下次追蹤日期
+          let nextFollowUpDate = null;
+          if (exam.unit === 'months') {
+            nextFollowUpDate = this.addMonthsToROCDate(examDate, exam.interval);
+          } else {
+            nextFollowUpDate = this.addDaysToROCDate(examDate, exam.interval * 365);
+          }
+
+          // 查找報告內容（僅部分檢查有報告）
+          let reportContent = '';
+          if (!['15021C', '21004C'].includes(examCode)) {
+            reportContent = findReport(examDate);
+          }
+
+          results[key] = {
+            name: exam.name,
+            code: examCode,
+            date: examDate,
+            reportContent: reportContent,
+            nextFollowUpDate: nextFollowUpDate
+          };
+        } else {
+          results[key] = null; // 無記錄
+        }
+      }
+
+      return results;
+    } catch (error) {
+      logger.error(`Failed to query examination records for patient ${patientId}:`, error);
+      return {};
+    }
+  }
+
+  /**
+   * 獲取今天的民國年日期
+   * @returns {string} - 今天的民國年日期 (YYYMMDD)
+   */
+  getTodayROCDate() {
+    const today = new Date();
+    const rocYear = today.getFullYear() - 1911;
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    return String(rocYear).padStart(3, '0') +
+           String(month).padStart(2, '0') +
+           String(day).padStart(2, '0');
+  }
+
+  /**
+   * 取得慢性病醫令名稱
+   * @param {string} code - 醫令代碼
+   * @returns {string} - 醫令名稱
+   */
+  getChronicDiseaseName(code) {
+    const names = {
+      'P1407C': 'DM-新收',
+      'P1408C': 'DM-複診',
+      'P1409C': 'DM-年度',
+      'P7001C': 'DKD-複診',
+      'P7002C': 'DKD-年度',
+      'P4301C': 'CKD-新收',
+      'P4302C': 'CKD-複診',
+      'P7501C': '代謝症候群-新收',
+      'P7502C': '代謝症候群-追蹤',
+      'P7503C': '代謝症候群-年度',
+      '19001C': '腹部超音波（初次）',
+      '19009C': '腹部超音波（追蹤）',
+      '19012C': '甲狀腺超音波',
+      '15021C': '細針穿刺',
+      '17003C': '肺功能檢查',
+      '17006C': '肺功能檢查（吸藥）',
+      '21004C': '尿流速檢查'
+    };
+    return names[code] || code;
   }
 
   /**

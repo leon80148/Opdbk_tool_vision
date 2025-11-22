@@ -1,7 +1,7 @@
 {
   "name": "anchia-opd-toolkit",
-  "version": "3.0.0",
-  "description": "診所櫃檯智慧助手 - Clinic Reception Assistant",
+  "version": "4.3.2",
+  "description": "安家診所掛號助手 - Anchia Clinic Registration Assistant",
   "main": "src/main/main.js",
   "author": "Anchia Clinic",
   "license": "MIT",
@@ -52,7 +52,7 @@
   },
   "build": {
     "appId": "com.anchia.opdtoolkit",
-    "productName": "診所櫃檯智慧助手",
+    "productName": "安家診所掛號助手",
     "directories": {
       "output": "dist"
     },

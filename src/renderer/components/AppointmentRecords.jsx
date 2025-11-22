@@ -11,13 +11,28 @@ function AppointmentRecords({ data }) {
     return session || '未知';
   };
 
-  // 格式化日期顯示（YYYYMMDD -> YYYY/MM/DD）
+  // 格式化日期顯示（統一顯示為民國年格式）
   const formatDate = (dateStr) => {
-    if (!dateStr || dateStr.length !== 8) return dateStr;
-    const year = dateStr.substring(0, 4);
-    const month = dateStr.substring(4, 6);
-    const day = dateStr.substring(6, 8);
-    return `${year}/${month}/${day}`;
+    if (!dateStr) return '-';
+
+    // 民國年格式：YYYMMDD (7位數) -> YYY/MM/DD
+    if (dateStr.length === 7) {
+      const rocYear = dateStr.substring(0, 3);
+      const month = dateStr.substring(3, 5);
+      const day = dateStr.substring(5, 7);
+      return `${rocYear}/${month}/${day}`;
+    }
+
+    // 西元年格式：YYYYMMDD (8位數) -> 轉換為民國年
+    if (dateStr.length === 8) {
+      const year = parseInt(dateStr.substring(0, 4));
+      const rocYear = year - 1911;
+      const month = dateStr.substring(4, 6);
+      const day = dateStr.substring(6, 8);
+      return `${rocYear}/${month}/${day}`;
+    }
+
+    return dateStr;
   };
 
   // 表格欄位定義

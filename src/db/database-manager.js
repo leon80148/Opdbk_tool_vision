@@ -207,11 +207,24 @@ class DatabaseManager {
     try {
       // 並行查詢所有 DBF 資料（優化效能：預計省下 200-400ms）
       const dbfStartTime = Date.now();
-      const [rawBasicInfo, clinicalHistory, rawAppointments, co05oRecords] = await Promise.all([
+      const [
+        rawBasicInfo,
+        clinicalHistory,
+        rawAppointments,
+        co03lRecords,
+        diabetesRecords,
+        kidneyRecords,
+        metabolicRecords,
+        examinationRecords
+      ] = await Promise.all([
         this.dbfReader.queryPatientBasicInfo(formattedId),      // DBF CO01M
         this.dbfReader.queryClinicalHistory(formattedId),       // DBF CO02M + CO03M
         this.dbfReader.queryAppointments(formattedId),          // DBF co05b
-        this.dbfReader.queryCO05ORecords(formattedId),          // DBF CO05O（合併查詢）
+        this.dbfReader.queryCO03LRecords(formattedId),          // DBF CO03L（看診紀錄，合併查詢）
+        this.dbfReader.queryDiabetesRecords(formattedId),       // DBF CO02M（糖尿病）
+        this.dbfReader.queryKidneyRecords(formattedId),         // DBF CO02M（腎臟病）
+        this.dbfReader.queryMetabolicRecords(formattedId),      // DBF CO02M（代謝症候群）
+        this.dbfReader.queryExaminationRecords(formattedId),    // DBF CO02M + CO02F（檢查記錄）
       ]);
       timings.dbfQueries = Date.now() - dbfStartTime;
 
@@ -219,8 +232,8 @@ class DatabaseManager {
       const normalizeStartTime = Date.now();
       const basicInfo = rawBasicInfo ? this.normalizeFieldNames(rawBasicInfo) : null;
       const appointments = rawAppointments.map(appt => this.normalizeFieldNames(appt));
-      const visitHistory = co05oRecords.visitHistory.map(visit => this.normalizeFieldNames(visit));
-      const preventiveCare = co05oRecords.preventiveCare.map(record => this.normalizeFieldNames(record));
+      const visitHistory = co03lRecords.visitHistory.map(visit => this.normalizeFieldNames(visit));
+      const preventiveCare = co03lRecords.preventiveCare.map(record => this.normalizeFieldNames(record));
       timings.normalization = Date.now() - normalizeStartTime;
 
       // 查詢檢驗矩陣（從 SQLite 寬表，本地查詢很快）
@@ -251,6 +264,10 @@ class DatabaseManager {
         appointments,
         visitHistory,
         preventiveCare,
+        diabetesRecords,      // 糖尿病管理記錄
+        kidneyRecords,        // 腎臟病管理記錄
+        metabolicRecords,     // 代謝症候群管理記錄
+        examinationRecords,   // 3年內檢查記錄
         actionList,
         queryTime: new Date().toISOString(),
         _performance: timings, // 加入效能數據供除錯用

@@ -40,6 +40,14 @@
   flex: 1;
 }
 
+.chronic-disease-section {
+  margin-top: 16px;
+}
+
+.examination-section {
+  margin-top: 16px;
+}
+
 .appointments-visits-section {
   margin-top: 16px;
   display: flex;

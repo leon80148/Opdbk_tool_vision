@@ -3,25 +3,25 @@ import { CheckCircleOutlined, MedicineBoxOutlined, WarningOutlined } from '@ant-
 import './PreventiveCare.css';
 
 function PreventiveCare({ basicInfo, preventiveCareRecords }) {
-  // 格式化日期顯示（民國年 YYYMMDD -> YYYY/MM/DD）
+  // 格式化日期顯示（統一顯示為民國年格式）
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
 
-    // 民國年格式：YYYMMDD (7位數)
+    // 民國年格式：YYYMMDD (7位數) -> YYY/MM/DD
     if (dateStr.length === 7) {
-      const rocYear = parseInt(dateStr.substring(0, 3));
-      const year = rocYear + 1911; // 轉換為西元年
+      const rocYear = dateStr.substring(0, 3);
       const month = dateStr.substring(3, 5);
       const day = dateStr.substring(5, 7);
-      return `${year}/${month}/${day}`;
+      return `${rocYear}/${month}/${day}`;
     }
 
-    // 西元年格式：YYYYMMDD (8位數)
+    // 西元年格式：YYYYMMDD (8位數) -> 轉換為民國年
     if (dateStr.length === 8) {
-      const year = dateStr.substring(0, 4);
+      const year = parseInt(dateStr.substring(0, 4));
+      const rocYear = year - 1911;
       const month = dateStr.substring(4, 6);
       const day = dateStr.substring(6, 8);
-      return `${year}/${month}/${day}`;
+      return `${rocYear}/${month}/${day}`;
     }
 
     return '-';
@@ -77,7 +77,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
     if (!preventiveCareRecords || preventiveCareRecords.length === 0) return null;
 
     const matchedRecords = preventiveCareRecords.filter(r =>
-      cardSequences.includes(r.tisrs)
+      cardSequences.includes(r.lisrs)
     );
 
     return matchedRecords.length > 0 ? matchedRecords[0] : null;
@@ -115,7 +115,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const lastRecord = findLatestPhase1Record();
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -135,9 +135,9 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
     }
 
     // 取得最近一次記錄的卡序和年齡層
-    const lastCardSeq = lastRecord.tisrs;
+    const lastCardSeq = lastRecord.lisrs;
     const lastAgeGroup = getCardSeqAgeGroup(lastCardSeq);
-    const lastYear = getYear(lastRecord.tbkdate);
+    const lastYear = getYear(lastRecord.date);
     const yearsSince = currentYear - lastYear;
 
     // 判斷：如果年齡層不同，表示剛滿40或65歲，可以執行
@@ -159,7 +159,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const phase2Record = findLatestPhase2Record();
-    const lastDate = phase2Record ? formatDate(phase2Record.tbkdate) : '-';
+    const lastDate = phase2Record ? formatDate(phase2Record.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -169,12 +169,12 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 檢查一階是否在當年度執行過（檢查所有一階卡序）
     const phase1Record = findLatestPhase1Record();
-    const phase1Year = phase1Record ? getYear(phase1Record.tbkdate) : null;
+    const phase1Year = phase1Record ? getYear(phase1Record.date) : null;
 
     if (!phase1Record || phase1Year !== currentYear) {
       return { canExecute: false, lastDate, reason: '需先執行一階' };
     }
-    const phase2Year = phase2Record ? getYear(phase2Record.tbkdate) : null;
+    const phase2Year = phase2Record ? getYear(phase2Record.date) : null;
 
     if (!phase2Record || phase2Year !== currentYear) {
       return { canExecute: true, lastDate, reason: '可執行' };
@@ -189,7 +189,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const lastRecord = findLatestRecord(['85']);
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -201,7 +201,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
       return { canExecute: true, lastDate, reason: '未曾執行' };
     }
 
-    const lastYear = getYear(lastRecord.tbkdate);
+    const lastYear = getYear(lastRecord.date);
     const yearsSince = currentYear - lastYear;
 
     return {
@@ -224,13 +224,13 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
     // 暫時假設符合條件
 
     const lastRecord = findLatestRecord(['95']);
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!lastRecord) {
       return { canExecute: true, lastDate, reason: '未曾執行' };
     }
 
-    const lastYear = getYear(lastRecord.tbkdate);
+    const lastYear = getYear(lastRecord.date);
     const yearsSince = currentYear - lastYear;
 
     return {
@@ -246,7 +246,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const lastRecord = findLatestRecord(['AU']);
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -267,8 +267,8 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 取得最後施打日期的年份和月份
     const currentSeason = getCurrentVaccineSeason();
-    const lastYear = getYear(lastRecord.tbkdate);
-    const lastMonth = lastRecord.tbkdate ? parseInt(lastRecord.tbkdate.substring(3, 5)) : 0;
+    const lastYear = getYear(lastRecord.date);
+    const lastMonth = lastRecord.date ? parseInt(lastRecord.date.substring(3, 5)) : 0;
 
     // 計算最後施打的施打季
     const lastSeason = getVaccineSeason(lastYear, lastMonth);
@@ -287,7 +287,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const lastRecord = findLatestRecord(['VU']);
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -309,8 +309,8 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
     }
 
     // 取得最後施打日期的年份和月份
-    const lastYear = getYear(lastRecord.tbkdate);
-    const lastMonth = lastRecord.tbkdate ? parseInt(lastRecord.tbkdate.substring(3, 5)) : 0;
+    const lastYear = getYear(lastRecord.date);
+    const lastMonth = lastRecord.date ? parseInt(lastRecord.date.substring(3, 5)) : 0;
 
     // 計算最後施打的施打季
     const lastSeason = getVaccineSeason(lastYear, lastMonth);
@@ -329,7 +329,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
 
     // 先查詢施打記錄，無論年齡是否符合都要顯示歷史記錄
     const lastRecord = findLatestRecord(['DU']);
-    const lastDate = lastRecord ? formatDate(lastRecord.tbkdate) : '-';
+    const lastDate = lastRecord ? formatDate(lastRecord.date) : '-';
 
     if (!age) return { canExecute: false, lastDate, reason: '無年齡資料' };
 
@@ -371,7 +371,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
       hasWarning: hasPhase2ButNoPhase1
     },
     { key: 'colorectal', item: '腸篩', ...checkColorectalScreening() },
-    { key: 'oral', item: '口篩', ...checkOralScreening() },
+    { key: 'oral', item: '口篩(抽菸或嚼檳榔者)', ...checkOralScreening() },
     { key: 'flu', item: '流感', ...checkFluVaccine() },
     { key: 'covid', item: '新冠', ...checkCovidVaccine() },
     { key: 'pneumococcal', item: '肺鏈', ...checkPneumococcalVaccine() },
@@ -386,7 +386,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
       width: 120,
     },
     {
-      title: '',
+      title: '符合資格',
       dataIndex: 'canExecute',
       key: 'canExecute',
       width: 60,
@@ -422,7 +422,7 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
       title={
         <span>
           <MedicineBoxOutlined style={{ marginRight: 8 }} />
-          預防保健
+          預防保健(僅查詢本院資料,仍需搭配國健署資料庫確認)
         </span>
       }
       className="preventive-care"

@@ -5,6 +5,8 @@ import PatientHeader from './components/PatientHeader';
 import PreventiveCare from './components/PreventiveCare';
 import AppointmentRecords from './components/AppointmentRecords';
 import VisitHistory from './components/VisitHistory';
+import ChronicDiseaseManagement from './components/ChronicDiseaseManagement';
+import ExaminationHistory from './components/ExaminationHistory';
 import SyncStatus from './components/SyncStatus';
 import './App.css';
 
@@ -39,7 +41,7 @@ function App() {
   return (
     <Layout className="app-layout">
       <Header className="app-header">
-        <div className="header-title">診所櫃檯智慧助手</div>
+        <div className="header-title">安家診所掛號助手</div>
         <SyncStatus />
       </Header>
 
@@ -61,6 +63,22 @@ function App() {
                   preventiveCareRecords={patientData.preventiveCare}
                 />
               </div>
+            </div>
+
+            {/* 慢性病管理區域 */}
+            <div className="chronic-disease-section">
+              <ChronicDiseaseManagement
+                diabetesRecords={patientData.diabetesRecords}
+                kidneyRecords={patientData.kidneyRecords}
+                metabolicRecords={patientData.metabolicRecords}
+              />
+            </div>
+
+            {/* 3年內檢查記錄區域 */}
+            <div className="examination-section">
+              <ExaminationHistory
+                examinationRecords={patientData.examinationRecords}
+              />
             </div>
 
             <div className="appointments-visits-section">

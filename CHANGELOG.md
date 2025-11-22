@@ -1,6 +1,35 @@
-# CHANGELOG - 安佳診所櫃檯助手
+# CHANGELOG - 安家診所掛號助手
 
 所有重要的變更都會記錄在此文件。
+
+---
+
+## [v4.3.2] - 2025-11-23
+
+### 🎯 應用程式更名與日期格式優化
+
+**更名**
+- 應用程式名稱從「安佳診所櫃檯助手」改為「安家診所掛號助手」
+- 更新所有相關文件（README.md, CLAUDE.md, package.json, index.html）
+
+**日期格式優化**
+- 統一所有日期顯示為民國年格式（例如：112/09/28）
+- 生日欄位額外顯示西元年參考（例如：76/10/15 (1987/10/15)）
+- 更新以下元件的日期格式：
+  - PreventiveCare.jsx（預防保健）
+  - VisitHistory.jsx（就診歷史）
+  - AppointmentRecords.jsx（預約紀錄）
+  - ChronicDiseaseManagement.jsx（慢性病管理）
+  - ExaminationHistory.jsx（檢查記錄）
+
+**檔案變更**
+- `package.json`: 版本更新為 4.3.2，productName 更新
+- `index.html`: title 更新
+- `README.md`: 標題與版本更新
+- `CLAUDE.md`: 標題與版本歷史更新
+- `CHANGELOG.md`: 新增此版本記錄
+- `src/db/dbf-reader.js`: formatBirthDate() 函數更新
+- 5 個前端元件的 formatDate() 函數更新
 
 ---
 

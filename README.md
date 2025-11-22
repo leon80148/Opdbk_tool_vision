@@ -1,6 +1,6 @@
-# 診所櫃檯智慧助手 (Clinic Reception Assistant) v3.0
+# 安家診所掛號助手 (Anchia Clinic Registration Assistant) v4.3.2
 
-> 基於 Electron + React 的桌面應用程式，協助診所櫃檯提供智慧化病患資訊整合與衛教提醒。
+> 基於 Electron + React 的桌面應用程式，協助診所掛號櫃檯提供智慧化病患資訊整合與預防保健管理。
 
 ---
 
@@ -466,4 +466,4 @@ MIT License
 
 ---
 
-**診所櫃檯智慧助手 v3.0** - 讓診所照護更智慧、更有溫度 ❤️
+**安家診所掛號助手 v4.3.2** - 讓診所照護更智慧、更有溫度 ❤️
