@@ -234,11 +234,29 @@ class DatabaseManager {
 
   /**
    * 查詢病患完整資料
+   * @param {string} patientId - 病歷號或身分證字號
    */
   async queryPatient(patientId) {
-    const formattedId = formatPatientId(patientId);
+    let formattedId = formatPatientId(patientId);
     const startTime = Date.now();
     const timings = {};
+
+    // 判斷是否為台灣身分證格式（1英文+9數字）
+    const isPersonId = /^[A-Z]\d{9}$/i.test(patientId.trim());
+
+    if (isPersonId) {
+      // 用身分證查詢病歷號
+      logger.info(`Querying patient by Person ID: ${patientId.trim()}`);
+      const result = await this.dbfReader.queryPatientByPersonId(patientId.trim());
+
+      if (!result) {
+        logger.warn(`No patient found with Person ID: ${patientId.trim()}`);
+        return null;
+      }
+
+      logger.info(`Found patient with Person ID ${patientId.trim()}: ${result.mname} (${result.kcstmr})`);
+      formattedId = result.kcstmr;
+    }
 
     try {
       // 並行查詢所有 DBF 資料（優化效能：預計省下 200-400ms）

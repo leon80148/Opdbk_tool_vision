@@ -27,6 +27,7 @@ class ConfigManager {
       },
       hotkey: {
         global: 'Ctrl+Alt+C',
+        capture: 'Ctrl+Alt+G',
         conflict_handling: 'warn',
       },
       labs: {
@@ -193,6 +194,32 @@ class ConfigManager {
     }
 
     return this.config[section];
+  }
+
+  /**
+   * 重新載入設定檔（用於讀取手動編輯的設定檔）
+   */
+  async reload() {
+    try {
+      if (fs.existsSync(this.configPath)) {
+        logger.info(`Reloading config from: ${this.configPath}`);
+
+        const fileContent = fs.readFileSync(this.configPath, 'utf-8');
+        const parsedConfig = ini.parse(fileContent);
+
+        // 合併預設值與載入的設定
+        this.config = this.mergeConfig(this.defaults, parsedConfig);
+
+        logger.info('Config reloaded successfully');
+      } else {
+        logger.warn(`Config file not found during reload: ${this.configPath}`);
+      }
+
+      return this.config;
+    } catch (error) {
+      logger.error('Failed to reload config:', error);
+      throw error;
+    }
   }
 
   /**

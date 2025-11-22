@@ -1,9 +1,10 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, clipboard } = require('electron');
 const path = require('path');
 const ConfigManager = require('./config-manager');
 const DatabaseManager = require('../db/database-manager');
 const SyncManager = require('../db/sync-manager');
 const logger = require('./logger');
+const keyboardSimulator = require('./keyboard-simulator');
 
 let mainWindow = null;
 let configManager = null;
@@ -162,6 +163,111 @@ function registerGlobalHotkey() {
 }
 
 /**
+ * 註冊抓取熱鍵（從其他視窗複製身分證字號）
+ * 按下熱鍵後：
+ * 1. 模擬 Ctrl+A、Ctrl+C 複製當前選中的文字
+ * 2. 讀取剪貼簿取得身分證字號
+ * 3. 顯示視窗並通知前端自動查詢
+ */
+async function registerCaptureHotkey() {
+  const config = configManager.getConfig();
+  const captureHotkey = config.hotkey?.capture || 'Ctrl+Alt+G';
+
+  try {
+    const success = globalShortcut.register(captureHotkey, async () => {
+      logger.info(`Capture hotkey triggered: ${captureHotkey}`);
+
+      try {
+        // 1. 儲存原剪貼簿內容
+        const originalClipboard = clipboard.readText();
+
+        // 2. 等待一下讓其他視窗準備好
+        await keyboardSimulator.wait(500);
+
+        // 3. 模擬 Ctrl+A（全選）- robotjs 是同步的，無需 await
+        keyboardSimulator.selectAll();
+        await keyboardSimulator.wait(100);  // 稍微等待一下
+
+        // 4. 模擬 Ctrl+C（複製）- robotjs 是同步的，無需 await
+        keyboardSimulator.copy();
+        await keyboardSimulator.wait(150); // 等待剪貼簿更新
+
+        // 5. 讀取剪貼簿內容
+        const capturedText = clipboard.readText().trim();
+
+        // 6. 恢復原剪貼簿內容
+        clipboard.writeText(originalClipboard);
+
+        // 7. 驗證是否為台灣身分證格式
+        const isPersonId = /^[A-Z]\d{9}$/i.test(capturedText);
+
+        if (isPersonId) {
+          logger.info(`Captured Person ID: ${capturedText}`);
+
+          // 8. 顯示視窗
+          if (!mainWindow) {
+            createWindow();
+          } else {
+            if (mainWindow.isMinimized()) {
+              mainWindow.restore();
+            }
+            mainWindow.setAlwaysOnTop(true);
+            mainWindow.show();
+            mainWindow.focus();
+
+            // 0.5秒後取消置頂
+            setTimeout(() => {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.setAlwaysOnTop(false);
+              }
+            }, 500);
+          }
+
+          // 9. 通知前端填入並查詢
+          mainWindow.webContents.send('patient-id-captured', capturedText);
+        } else {
+          logger.warn(`Captured text is not a valid Person ID: ${capturedText}`);
+
+          // 如果不是身分證格式，也嘗試查詢看看（可能是病歷號）
+          if (capturedText && /^\d+$/.test(capturedText)) {
+            logger.info(`Captured numeric ID: ${capturedText}`);
+
+            if (!mainWindow) {
+              createWindow();
+            } else {
+              if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+              }
+              mainWindow.setAlwaysOnTop(true);
+              mainWindow.show();
+              mainWindow.focus();
+
+              setTimeout(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.setAlwaysOnTop(false);
+                }
+              }, 500);
+            }
+
+            mainWindow.webContents.send('patient-id-captured', capturedText);
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to capture patient ID:', error);
+      }
+    });
+
+    if (success) {
+      logger.info(`Capture hotkey registered: ${captureHotkey}`);
+    } else {
+      logger.warn(`Failed to register capture hotkey: ${captureHotkey}`);
+    }
+  } catch (error) {
+    logger.error('Error registering capture hotkey:', error);
+  }
+}
+
+/**
  * 初始化資料庫與同步管理
  */
 async function initializeDatabase() {
@@ -253,7 +359,13 @@ function setupIpcHandlers() {
   // 取得設定
   ipcMain.handle('get-config', async () => {
     try {
+      // 重新載入設定檔以確保取得最新值（支援手動編輯 config.ini）
+      await configManager.reload();
       const config = configManager.getConfig();
+
+      logger.info(`[get-config] Hotkey from config: ${config.hotkey?.global}`);
+      logger.info(`[get-config] Full hotkey config:`, config.hotkey);
+
       return { success: true, data: config };
     } catch (error) {
       logger.error('Error getting config:', error);
@@ -268,13 +380,11 @@ function setupIpcHandlers() {
       await configManager.save(newConfig);
 
       // 如果熱鍵有變更，重新註冊
-      if (newConfig.hotkey?.global) {
-        const currentHotkey = configManager.get('hotkey', 'global');
-        if (currentHotkey !== newConfig.hotkey.global) {
-          logger.info('Hotkey changed, re-registering...');
-          globalShortcut.unregisterAll();
-          registerGlobalHotkey();
-        }
+      if (newConfig.hotkey?.global || newConfig.hotkey?.capture) {
+        logger.info('Hotkey settings changed, re-registering...');
+        globalShortcut.unregisterAll();
+        registerGlobalHotkey();
+        registerCaptureHotkey();
       }
 
       return { success: true };
@@ -325,6 +435,9 @@ app.whenReady().then(async () => {
 
     // 註冊全域熱鍵
     registerGlobalHotkey();
+
+    // 註冊抓取熱鍵
+    registerCaptureHotkey();
 
     // 設定 IPC 處理器
     setupIpcHandlers();

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, Table, Tag, Tooltip } from 'antd';
 import { FileSearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import './ExaminationHistory.css';
@@ -171,4 +172,5 @@ function ExaminationHistory({ examinationRecords }) {
   );
 }
 
-export default ExaminationHistory;
+// 使用 React.memo 優化，避免父元件更新時不必要的重新渲染
+export default React.memo(ExaminationHistory);

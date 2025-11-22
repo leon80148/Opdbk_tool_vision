@@ -7,8 +7,9 @@ function Settings({ visible, onClose }) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [currentConfig, setCurrentConfig] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const hotkeyInputRef = useRef(null);
+  const [recordingField, setRecordingField] = useState(null); // 'global' 或 'capture' 或 null
+  const globalHotkeyInputRef = useRef(null);
+  const captureHotkeyInputRef = useRef(null);
 
   // 載入目前設定
   useEffect(() => {
@@ -20,17 +21,33 @@ function Settings({ visible, onClose }) {
   const loadCurrentConfig = async () => {
     try {
       const result = await window.electronAPI.getConfig();
+      console.log('📋 [Settings] getConfig result:', result);
+
       if (result.success) {
         setCurrentConfig(result.data);
 
-        // 設定表單初始值
-        form.setFieldsValue({
-          hotkey: result.data.hotkey?.global || 'Ctrl+Alt+C',
+        console.log('📋 [Settings] hotkey.global:', result.data.hotkey?.global);
+        console.log('📋 [Settings] Full hotkey config:', result.data.hotkey);
+
+        const formValues = {
+          globalHotkey: result.data.hotkey?.global || 'Ctrl+Alt+C',
+          captureHotkey: result.data.hotkey?.capture || 'Ctrl+Alt+G',
           windowWidth: result.data.ui?.window_width || 1200,
           windowHeight: result.data.ui?.window_height || 800,
           windowX: result.data.ui?.window_x || null,
           windowY: result.data.ui?.window_y || null,
-        });
+        };
+
+        console.log('📋 [Settings] Setting form values:', formValues);
+
+        // 設定表單初始值
+        form.setFieldsValue(formValues);
+
+        // 確認表單值是否正確設定
+        setTimeout(() => {
+          const actualValues = form.getFieldsValue();
+          console.log('📋 [Settings] Actual form values after set:', actualValues);
+        }, 100);
       }
     } catch (error) {
       console.error('Failed to load config:', error);
@@ -46,7 +63,8 @@ function Settings({ visible, onClose }) {
       // 準備設定資料
       const configToSave = {
         hotkey: {
-          global: values.hotkey,
+          global: values.globalHotkey,
+          capture: values.captureHotkey,
         },
         ui: {
           window_width: values.windowWidth,
@@ -92,19 +110,20 @@ function Settings({ visible, onClose }) {
   };
 
   // 開始錄製熱鍵
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    message.info('請按下您想要的熱鍵組合...');
+  const handleStartRecording = (field) => {
+    setRecordingField(field);
+    const fieldName = field === 'global' ? '縮放視窗熱鍵' : '查詢熱鍵';
+    message.info(`請按下您想要的${fieldName}組合...`);
   };
 
   // 停止錄製熱鍵
   const handleStopRecording = () => {
-    setIsRecording(false);
+    setRecordingField(null);
   };
 
   // 鍵盤事件處理（偵測熱鍵）
   const handleKeyDown = (e) => {
-    if (!isRecording) return;
+    if (!recordingField) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -117,9 +136,12 @@ function Settings({ visible, onClose }) {
     if (e.shiftKey) keys.push('Shift');
     if (e.metaKey) keys.push('Win');
 
-    // 收集主鍵（排除修飾鍵本身）
+    // 檢查是否為修飾鍵本身
     const mainKey = e.key;
-    if (!['Control', 'Alt', 'Shift', 'Meta'].includes(mainKey)) {
+    const isModifierKey = ['Control', 'Alt', 'Shift', 'Meta'].includes(mainKey);
+
+    // 只有在按下非修飾鍵（字母、數字等）時才結束錄製
+    if (!isModifierKey) {
       // 轉換特殊鍵名
       let keyName = mainKey;
       if (mainKey === ' ') keyName = 'Space';
@@ -127,26 +149,33 @@ function Settings({ visible, onClose }) {
       else if (mainKey.startsWith('Arrow')) keyName = mainKey.replace('Arrow', '');
 
       keys.push(keyName);
-    }
 
-    // 至少要有一個修飾鍵 + 一個主鍵
-    if (keys.length >= 2) {
-      const hotkeyString = keys.join('+');
-      form.setFieldsValue({ hotkey: hotkeyString });
-      setIsRecording(false);
-      message.success(`熱鍵已設定為：${hotkeyString}`);
+      // 至少要有一個修飾鍵 + 一個主鍵
+      if (keys.length >= 2) {
+        const hotkeyString = keys.join('+');
+        const fieldName = recordingField === 'global' ? 'globalHotkey' : 'captureHotkey';
+        form.setFieldsValue({ [fieldName]: hotkeyString });
+        setRecordingField(null);
+
+        const displayName = recordingField === 'global' ? '縮放視窗熱鍵' : '查詢熱鍵';
+        message.success(`${displayName}已設定為：${hotkeyString}`);
+      } else {
+        // 只按了字母鍵，沒有修飾鍵
+        message.warning('請至少搭配一個修飾鍵（Ctrl、Alt、Shift）');
+      }
     }
+    // 如果只按了修飾鍵，不做任何處理，繼續等待用戶按下字母鍵
   };
 
   // 監聽鍵盤事件
   useEffect(() => {
-    if (isRecording) {
+    if (recordingField) {
       window.addEventListener('keydown', handleKeyDown);
       return () => {
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isRecording]);
+  }, [recordingField]);
 
   return (
     <Modal
@@ -176,29 +205,65 @@ function Settings({ visible, onClose }) {
         <Divider orientation="left">熱鍵設定</Divider>
 
         <Form.Item
-          label="全域熱鍵"
-          name="hotkey"
-          rules={[{ required: true, message: '請設定熱鍵組合' }]}
-          extra="點擊「開始錄製」後按下您想要的熱鍵組合"
+          label="縮放視窗熱鍵"
+          extra="用於顯示/隱藏主視窗。點擊「開始錄製」後按下您想要的熱鍵組合"
         >
           <Space.Compact style={{ width: '100%' }}>
-            <Input
-              ref={hotkeyInputRef}
-              placeholder="Ctrl+Alt+C"
-              readOnly
-              style={{
-                flex: 1,
-                backgroundColor: isRecording ? '#fff7e6' : 'white',
-                borderColor: isRecording ? '#faad14' : undefined
-              }}
-            />
-            <Button
-              type={isRecording ? 'primary' : 'default'}
-              danger={isRecording}
-              icon={<ThunderboltOutlined />}
-              onClick={isRecording ? handleStopRecording : handleStartRecording}
+            <Form.Item
+              name="globalHotkey"
+              noStyle
+              rules={[{ required: true, message: '請設定縮放視窗熱鍵' }]}
             >
-              {isRecording ? '停止錄製' : '開始錄製'}
+              <Input
+                ref={globalHotkeyInputRef}
+                placeholder="請錄製熱鍵"
+                readOnly
+                style={{
+                  flex: 1,
+                  backgroundColor: recordingField === 'global' ? '#fff7e6' : 'white',
+                  borderColor: recordingField === 'global' ? '#faad14' : undefined
+                }}
+              />
+            </Form.Item>
+            <Button
+              type={recordingField === 'global' ? 'primary' : 'default'}
+              danger={recordingField === 'global'}
+              icon={<ThunderboltOutlined />}
+              onClick={recordingField === 'global' ? handleStopRecording : () => handleStartRecording('global')}
+            >
+              {recordingField === 'global' ? '停止錄製' : '開始錄製'}
+            </Button>
+          </Space.Compact>
+        </Form.Item>
+
+        <Form.Item
+          label="查詢熱鍵"
+          extra="用於從其他視窗抓取身分證/病歷號並自動查詢"
+        >
+          <Space.Compact style={{ width: '100%' }}>
+            <Form.Item
+              name="captureHotkey"
+              noStyle
+              rules={[{ required: true, message: '請設定查詢熱鍵' }]}
+            >
+              <Input
+                ref={captureHotkeyInputRef}
+                placeholder="請錄製熱鍵"
+                readOnly
+                style={{
+                  flex: 1,
+                  backgroundColor: recordingField === 'capture' ? '#fff7e6' : 'white',
+                  borderColor: recordingField === 'capture' ? '#faad14' : undefined
+                }}
+              />
+            </Form.Item>
+            <Button
+              type={recordingField === 'capture' ? 'primary' : 'default'}
+              danger={recordingField === 'capture'}
+              icon={<ThunderboltOutlined />}
+              onClick={recordingField === 'capture' ? handleStopRecording : () => handleStartRecording('capture')}
+            >
+              {recordingField === 'capture' ? '停止錄製' : '開始錄製'}
             </Button>
           </Space.Compact>
         </Form.Item>

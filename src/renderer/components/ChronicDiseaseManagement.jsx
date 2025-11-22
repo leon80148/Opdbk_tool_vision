@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, Table, Tag, Tooltip, Row, Col } from 'antd';
 import { HeartOutlined, ExperimentOutlined, AlertOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import './ChronicDiseaseManagement.css';
@@ -177,4 +178,5 @@ function ChronicDiseaseManagement({ diabetesRecords, kidneyRecords, metabolicRec
   );
 }
 
-export default ChronicDiseaseManagement;
+// 使用 React.memo 優化，避免父元件更新時不必要的重新渲染
+export default React.memo(ChronicDiseaseManagement);

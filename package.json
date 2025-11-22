@@ -1,6 +1,6 @@
 {
   "name": "anchia-opd-toolkit",
-  "version": "4.3.2",
+  "version": "4.4.0",
   "description": "安家診所掛號助手 - Anchia Clinic Registration Assistant",
   "main": "src/main/main.js",
   "author": "Anchia Clinic",
@@ -27,13 +27,10 @@
     "dbffile": "^1.12.0",
     "iconv-lite": "^0.6.3",
     "ini": "^4.1.1",
-    "node-cron": "^3.0.3",
-    "odbc": "^2.4.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
-    "winston": "^3.11.0",
-    "zustand": "^4.4.7"
+    "robotjs": "^0.6.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

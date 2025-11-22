@@ -216,6 +216,29 @@ class DBFReader {
   }
 
   /**
+   * 用身分證字號查詢病患（取得病歷號）
+   * @param {string} personId - 身分證字號
+   * @returns {Object|null} - { kcstmr, mname, mpersonid } 或 null
+   */
+  async queryPatientByPersonId(personId) {
+    const records = await this.openAndReadDBF('CO01M');
+
+    // 查找身分證字號
+    const patient = records.find(r => r.MPERSONID?.trim().toUpperCase() === personId.trim().toUpperCase());
+
+    if (!patient) {
+      return null;
+    }
+
+    // 回傳病歷號和基本資訊
+    return {
+      kcstmr: patient.KCSTMR?.trim(),
+      mname: patient.MNAME?.trim(),
+      mpersonid: patient.MPERSONID?.trim()
+    };
+  }
+
+  /**
    * 查詢診療歷程
    */
   async queryClinicalHistory(patientId) {

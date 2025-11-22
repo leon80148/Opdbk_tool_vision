@@ -64,4 +64,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onDbInitError: (callback) => {
     ipcRenderer.on('db-init-error', (event, error) => callback(error));
   },
+
+  /**
+   * 監聽病患ID抓取事件（從其他視窗複製）
+   * @param {Function} callback - 回呼函數，參數為抓取到的ID（病歷號或身分證）
+   * @returns {Function} 清理函數，用於移除監聽器
+   */
+  onPatientIdCaptured: (callback) => {
+    const handler = (event, patientId) => callback(patientId);
+    ipcRenderer.on('patient-id-captured', handler);
+
+    // 返回清理函數
+    return () => {
+      ipcRenderer.removeListener('patient-id-captured', handler);
+    };
+  },
 });

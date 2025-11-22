@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { Card, Table, Tooltip } from 'antd';
 import { CheckCircleOutlined, MedicineBoxOutlined, WarningOutlined } from '@ant-design/icons';
 import './PreventiveCare.css';
@@ -349,33 +350,35 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
     };
   };
 
-  // 建立表格資料
-  const health1Result = checkAdultHealthPhase1();
-  const health2Result = checkAdultHealthPhase2();
+  // 建立表格資料（使用 useMemo 快取計算結果，避免重複渲染時重新計算）
+  const tableData = useMemo(() => {
+    const health1Result = checkAdultHealthPhase1();
+    const health2Result = checkAdultHealthPhase2();
 
-  // 檢查異常：有二階但沒有一階
-  const hasPhase2ButNoPhase1 =
-    health2Result.lastDate !== '-' && health1Result.lastDate === '-';
+    // 檢查異常：有二階但沒有一階
+    const hasPhase2ButNoPhase1 =
+      health2Result.lastDate !== '-' && health1Result.lastDate === '-';
 
-  const tableData = [
-    {
-      key: 'health1',
-      item: '成健一階',
-      ...health1Result,
-      hasWarning: hasPhase2ButNoPhase1
-    },
-    {
-      key: 'health2',
-      item: '成健二階',
-      ...health2Result,
-      hasWarning: hasPhase2ButNoPhase1
-    },
-    { key: 'colorectal', item: '腸篩', ...checkColorectalScreening() },
-    { key: 'oral', item: '口篩(抽菸或嚼檳榔者)', ...checkOralScreening() },
-    { key: 'flu', item: '流感', ...checkFluVaccine() },
-    { key: 'covid', item: '新冠', ...checkCovidVaccine() },
-    { key: 'pneumococcal', item: '肺鏈', ...checkPneumococcalVaccine() },
-  ];
+    return [
+      {
+        key: 'health1',
+        item: '成健一階',
+        ...health1Result,
+        hasWarning: hasPhase2ButNoPhase1
+      },
+      {
+        key: 'health2',
+        item: '成健二階',
+        ...health2Result,
+        hasWarning: hasPhase2ButNoPhase1
+      },
+      { key: 'colorectal', item: '腸篩', ...checkColorectalScreening() },
+      { key: 'oral', item: '口篩(抽菸或嚼檳榔者)', ...checkOralScreening() },
+      { key: 'flu', item: '流感', ...checkFluVaccine() },
+      { key: 'covid', item: '新冠', ...checkCovidVaccine() },
+      { key: 'pneumococcal', item: '肺鏈', ...checkPneumococcalVaccine() },
+    ];
+  }, [basicInfo, preventiveCareRecords]); // 只在 basicInfo 或 preventiveCareRecords 改變時重新計算
 
   // 表格欄位定義
   const columns = [
@@ -437,4 +440,5 @@ function PreventiveCare({ basicInfo, preventiveCareRecords }) {
   );
 }
 
-export default PreventiveCare;
+// 使用 React.memo 優化，避免父元件更新時不必要的重新渲染
+export default React.memo(PreventiveCare);

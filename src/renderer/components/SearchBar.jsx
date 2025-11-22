@@ -22,7 +22,7 @@ function SearchBar({ onSearch, loading }) {
     <div className="search-bar">
       <Input
         size="large"
-        placeholder="請輸入病歷號（自動補零至 7 碼）"
+        placeholder="請輸入病歷號或身分證字號"
         value={patientId}
         onChange={(e) => setPatientId(e.target.value)}
         onKeyPress={handleKeyPress}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout, Button, Space } from 'antd';
 import { SettingOutlined, CloseOutlined } from '@ant-design/icons';
 import SearchBar from './components/SearchBar';
@@ -20,6 +20,30 @@ function App() {
   const [dbReady, setDbReady] = useState(false); // 資料庫是否載入完成
   const [settingsVisible, setSettingsVisible] = useState(false); // 設定對話框顯示狀態
 
+  /**
+   * 處理病患查詢（使用 useCallback 避免閉包問題）
+   */
+  const handlePatientQuery = useCallback(async (patientId) => {
+    console.log('[handlePatientQuery] 開始查詢病患:', patientId);
+    setLoading(true);
+
+    try {
+      const result = await window.electronAPI.queryPatient(patientId);
+
+      if (result.success) {
+        console.log('[handlePatientQuery] 查詢成功:', result.data);
+        setPatientData(result.data);
+      } else {
+        console.error('[handlePatientQuery] Query failed:', result.error);
+        // TODO: 顯示錯誤訊息
+      }
+    } catch (error) {
+      console.error('[handlePatientQuery] Query error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // 空依賴數組，因為只使用 setState
+
   // 監聽資料庫初始化進度
   useEffect(() => {
     if (window.electronAPI && window.electronAPI.onDbInitProgress) {
@@ -34,32 +58,31 @@ function App() {
     }
   }, []);
 
+  // 監聽病患ID抓取事件（從其他視窗複製身分證或病歷號）
+  useEffect(() => {
+    console.log('[useEffect] 設定 patient-id-captured 監聽器');
+
+    if (window.electronAPI && window.electronAPI.onPatientIdCaptured) {
+      const removeListener = window.electronAPI.onPatientIdCaptured((patientId) => {
+        console.log('[IPC] Patient ID captured:', patientId);
+        // 自動查詢抓取到的病患ID
+        handlePatientQuery(patientId);
+      });
+
+      // 清理函數
+      return () => {
+        console.log('[useEffect] 移除 patient-id-captured 監聽器');
+        if (removeListener && typeof removeListener === 'function') {
+          removeListener();
+        }
+      };
+    }
+  }, [handlePatientQuery]); // 添加 handlePatientQuery 到依賴數組
+
   // 如果資料庫尚未載入完成，顯示 LoadingScreen
   if (!dbReady) {
     return <LoadingScreen />;
   }
-
-  /**
-   * 處理病患查詢
-   */
-  const handlePatientQuery = async (patientId) => {
-    setLoading(true);
-
-    try {
-      const result = await window.electronAPI.queryPatient(patientId);
-
-      if (result.success) {
-        setPatientData(result.data);
-      } else {
-        console.error('Query failed:', result.error);
-        // TODO: 顯示錯誤訊息
-      }
-    } catch (error) {
-      console.error('Query error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   /**
    * 開啟設定對話框

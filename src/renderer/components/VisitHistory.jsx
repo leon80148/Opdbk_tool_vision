@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { Card, Table, Empty, Tag } from 'antd';
 import { MedicineBoxOutlined } from '@ant-design/icons';
 import './VisitHistory.css';
@@ -93,6 +94,33 @@ function VisitHistory({ data }) {
     }
   };
 
+  // 預先計算所有記錄的慢箋到期日（使用 useMemo 快取計算結果）
+  const enrichedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    return data.map(record => {
+      const lldtt = parseInt(record.lldtt);
+      const dayqty = parseInt(record.dayqty);
+
+      let expiryDate = '-';
+
+      // 只有當慢箋次數有數據時才計算
+      if (lldtt && lldtt > 0 && dayqty && dayqty > 0) {
+        const totalDays = dayqty * lldtt;
+        const expiryDateStr = calculateExpiryDate(record.date, totalDays);
+
+        if (expiryDateStr) {
+          expiryDate = formatDate(expiryDateStr);
+        }
+      }
+
+      return {
+        ...record,
+        expiryDate // 預先計算的到期日
+      };
+    });
+  }, [data]); // 只在 data 改變時重新計算
+
   // 表格欄位定義
   const columns = [
     {
@@ -155,28 +183,10 @@ function VisitHistory({ data }) {
     },
     {
       title: '慢箋到期日',
+      dataIndex: 'expiryDate', // 使用預先計算好的值
       key: 'expiryDate',
       width: 120,
       align: 'center',
-      render: (_, record) => {
-        const lldtt = parseInt(record.lldtt);
-        const dayqty = parseInt(record.dayqty);
-
-        // 只有當慢箋次數有數據時才計算
-        if (!lldtt || lldtt === 0 || !dayqty || dayqty === 0) {
-          return '-';
-        }
-
-        // 計算總天數 = 開藥天數 * 慢箋次數
-        const totalDays = dayqty * lldtt;
-
-        // 計算到期日
-        const expiryDateStr = calculateExpiryDate(record.date, totalDays);
-
-        if (!expiryDateStr) return '-';
-
-        return formatDate(expiryDateStr);
-      },
     },
     {
       title: '註記',
@@ -215,7 +225,7 @@ function VisitHistory({ data }) {
     >
       <Table
         columns={columns}
-        dataSource={data}
+        dataSource={enrichedData}
         rowKey={(record) => `${record.kcstmr}_${record.date}_${record.time}`}
         pagination={{
           pageSize: 10,
@@ -229,4 +239,5 @@ function VisitHistory({ data }) {
   );
 }
 
-export default VisitHistory;
+// 使用 React.memo 優化，避免父元件更新時不必要的重新渲染
+export default React.memo(VisitHistory);
