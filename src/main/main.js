@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu } = require('electron');
 const path = require('path');
 const ConfigManager = require('./config-manager');
 const DatabaseManager = require('../db/database-manager');
@@ -23,6 +23,7 @@ function createWindow() {
     height: config.ui?.window_height || 800,
     show: false,
     frame: true,
+    autoHideMenuBar: true, // 隱藏選單列（File, Edit, View...）
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -39,6 +40,9 @@ function createWindow() {
   }
 
   mainWindow = new BrowserWindow(windowOptions);
+
+  // 完全移除應用程式選單（確保在所有平台都隱藏）
+  Menu.setApplicationMenu(null);
 
   // 開發模式：載入 Vite 開發伺服器
   // 生產模式：載入建置後的檔案

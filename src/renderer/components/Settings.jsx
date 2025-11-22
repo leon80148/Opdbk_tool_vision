@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Button, message, Divider } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
+import { useState, useEffect, useRef } from 'react';
+import { Modal, Form, Input, InputNumber, Button, message, Divider, Space } from 'antd';
+import { SettingOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import './Settings.css';
 
 function Settings({ visible, onClose }) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [currentConfig, setCurrentConfig] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const hotkeyInputRef = useRef(null);
 
   // 載入目前設定
   useEffect(() => {
@@ -89,6 +91,63 @@ function Settings({ visible, onClose }) {
     }
   };
 
+  // 開始錄製熱鍵
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    message.info('請按下您想要的熱鍵組合...');
+  };
+
+  // 停止錄製熱鍵
+  const handleStopRecording = () => {
+    setIsRecording(false);
+  };
+
+  // 鍵盤事件處理（偵測熱鍵）
+  const handleKeyDown = (e) => {
+    if (!isRecording) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const keys = [];
+
+    // 收集修飾鍵
+    if (e.ctrlKey) keys.push('Ctrl');
+    if (e.altKey) keys.push('Alt');
+    if (e.shiftKey) keys.push('Shift');
+    if (e.metaKey) keys.push('Win');
+
+    // 收集主鍵（排除修飾鍵本身）
+    const mainKey = e.key;
+    if (!['Control', 'Alt', 'Shift', 'Meta'].includes(mainKey)) {
+      // 轉換特殊鍵名
+      let keyName = mainKey;
+      if (mainKey === ' ') keyName = 'Space';
+      else if (mainKey.length === 1) keyName = mainKey.toUpperCase();
+      else if (mainKey.startsWith('Arrow')) keyName = mainKey.replace('Arrow', '');
+
+      keys.push(keyName);
+    }
+
+    // 至少要有一個修飾鍵 + 一個主鍵
+    if (keys.length >= 2) {
+      const hotkeyString = keys.join('+');
+      form.setFieldsValue({ hotkey: hotkeyString });
+      setIsRecording(false);
+      message.success(`熱鍵已設定為：${hotkeyString}`);
+    }
+  };
+
+  // 監聽鍵盤事件
+  useEffect(() => {
+    if (isRecording) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isRecording]);
+
   return (
     <Modal
       title={
@@ -119,10 +178,29 @@ function Settings({ visible, onClose }) {
         <Form.Item
           label="全域熱鍵"
           name="hotkey"
-          rules={[{ required: true, message: '請輸入熱鍵組合' }]}
-          extra="格式：Modifier+Key，例如 Ctrl+Alt+C"
+          rules={[{ required: true, message: '請設定熱鍵組合' }]}
+          extra="點擊「開始錄製」後按下您想要的熱鍵組合"
         >
-          <Input placeholder="Ctrl+Alt+C" />
+          <Space.Compact style={{ width: '100%' }}>
+            <Input
+              ref={hotkeyInputRef}
+              placeholder="Ctrl+Alt+C"
+              readOnly
+              style={{
+                flex: 1,
+                backgroundColor: isRecording ? '#fff7e6' : 'white',
+                borderColor: isRecording ? '#faad14' : undefined
+              }}
+            />
+            <Button
+              type={isRecording ? 'primary' : 'default'}
+              danger={isRecording}
+              icon={<ThunderboltOutlined />}
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+            >
+              {isRecording ? '停止錄製' : '開始錄製'}
+            </Button>
+          </Space.Compact>
         </Form.Item>
 
         <Divider orientation="left">視窗設定</Divider>
