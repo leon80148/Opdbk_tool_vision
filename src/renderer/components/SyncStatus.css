@@ -1,0 +1,19 @@
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sync-text {
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.sync-button {
+  color: #fff;
+  border-color: #40a9ff;
+}
+
+.sync-button:hover {
+  background-color: #40a9ff;
+}

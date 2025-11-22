@@ -1,0 +1,19 @@
+.clinical-journey {
+  background: #fff;
+}
+
+.timeline-item {
+  padding: 8px 0;
+}
+
+.timeline-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.timeline-content {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.8;
+}

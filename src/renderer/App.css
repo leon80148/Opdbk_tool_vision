@@ -1,0 +1,82 @@
+.app-layout {
+  height: 100vh;
+}
+
+.app-header {
+  background: #001529;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.app-content {
+  padding: 24px;
+  overflow-y: auto;
+  background: #f0f2f5;
+}
+
+.search-section {
+  margin-bottom: 16px;
+}
+
+.patient-info-section {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.patient-header-panel {
+  flex: 1;
+}
+
+.preventive-care-panel {
+  flex: 1;
+}
+
+.appointments-visits-section {
+  margin-top: 16px;
+  display: flex;
+  gap: 24px;
+}
+
+.appointment-records-panel {
+  flex: 0 0 45%;
+}
+
+.visit-history-panel {
+  flex: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 100px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+@media (max-width: 1200px) {
+  .patient-info-section {
+    flex-direction: column;
+  }
+
+  .patient-header-panel,
+  .preventive-care-panel {
+    flex: 1 1 auto;
+  }
+
+  .appointments-visits-section {
+    flex-direction: column;
+  }
+
+  .appointment-records-panel,
+  .visit-history-panel {
+    flex: 1 1 auto;
+  }
+}

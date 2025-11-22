@@ -1,0 +1,20 @@
+.appointment-records {
+  height: 100%;
+}
+
+.appointment-records .ant-card-body {
+  padding: 16px;
+}
+
+.appointment-records .ant-table {
+  font-size: 13px;
+}
+
+.appointment-records .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.appointment-records .ant-empty {
+  padding: 40px 0;
+}

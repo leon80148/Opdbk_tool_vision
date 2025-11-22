@@ -1,0 +1,68 @@
+.patient-header {
+  background: #fff;
+}
+
+.patient-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.patient-basic {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.patient-name {
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.patient-name .name {
+  margin-right: 8px;
+}
+
+.patient-name .id {
+  color: #666;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.patient-contact {
+  display: flex;
+  gap: 24px;
+  color: #666;
+}
+
+.patient-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.patient-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.patient-vip-tag {
+  display: flex;
+}
+
+.patient-remark {
+  width: 100%;
+}
+
+.patient-remark .ant-alert {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.patient-remark .ant-alert-description {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

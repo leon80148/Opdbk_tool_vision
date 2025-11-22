@@ -1,0 +1,296 @@
+{
+  "_comment": "檢驗項目代碼對應表 (LabCodeMap) - 用於診所櫃檯智慧助手",
+  "_version": "1.0",
+  "_last_updated": "2025-11-22",
+
+  "DM": {
+    "_category_name": "糖尿病相關檢驗",
+    "items": {
+      "HBA1C": {
+        "hitem_code": "HBA1C",
+        "display_name": "糖化血色素",
+        "display_name_en": "Hemoglobin A1C",
+        "unit": "%",
+        "normal_range": {
+          "min": 4.0,
+          "max": 6.0,
+          "reference": "4.0-6.0%"
+        },
+        "thresholds": {
+          "normal": 6.0,
+          "warning": 7.0,
+          "critical": 9.0
+        },
+        "alert_rules": {
+          "education_required": "> 7.0",
+          "color_coding": {
+            "green": "<= 6.0",
+            "orange": "6.1-8.9",
+            "red": ">= 9.0"
+          }
+        }
+      },
+      "UACR": {
+        "hitem_code": "UACR",
+        "display_name": "尿液白蛋白肌酸酐比值",
+        "display_name_en": "Urine Albumin-to-Creatinine Ratio",
+        "unit": "mg/g",
+        "normal_range": {
+          "max": 30,
+          "reference": "< 30 mg/g"
+        },
+        "thresholds": {
+          "normal": 30,
+          "warning": 300,
+          "critical": 500
+        },
+        "alert_rules": {
+          "education_required": "> 30",
+          "color_coding": {
+            "green": "< 30",
+            "orange": "30-299",
+            "red": ">= 300"
+          }
+        }
+      },
+      "eGFR": {
+        "hitem_code": "eGFR",
+        "display_name": "腎絲球過濾率",
+        "display_name_en": "Estimated Glomerular Filtration Rate",
+        "unit": "mL/min/1.73m²",
+        "normal_range": {
+          "min": 90,
+          "reference": ">= 90 mL/min/1.73m²"
+        },
+        "thresholds": {
+          "normal": 90,
+          "warning": 60,
+          "critical": 30
+        },
+        "alert_rules": {
+          "education_required": "< 60",
+          "color_coding": {
+            "green": ">= 90",
+            "orange": "30-89",
+            "red": "< 30"
+          }
+        }
+      }
+    }
+  },
+
+  "HTN_LIP": {
+    "_category_name": "三高相關檢驗",
+    "items": {
+      "CHOL": {
+        "hitem_code": "CHOL",
+        "display_name": "總膽固醇",
+        "display_name_en": "Total Cholesterol",
+        "unit": "mg/dL",
+        "normal_range": {
+          "max": 200,
+          "reference": "< 200 mg/dL"
+        },
+        "thresholds": {
+          "normal": 200,
+          "warning": 240,
+          "critical": 280
+        },
+        "alert_rules": {
+          "education_required": "> 240",
+          "color_coding": {
+            "green": "< 200",
+            "orange": "200-239",
+            "red": ">= 240"
+          }
+        }
+      },
+      "LDL": {
+        "hitem_code": "LDL",
+        "display_name": "低密度脂蛋白膽固醇",
+        "display_name_en": "Low-Density Lipoprotein Cholesterol",
+        "unit": "mg/dL",
+        "normal_range": {
+          "max": 130,
+          "reference": "< 130 mg/dL"
+        },
+        "thresholds": {
+          "normal": 130,
+          "warning": 160,
+          "critical": 190
+        },
+        "alert_rules": {
+          "education_required": "> 160",
+          "color_coding": {
+            "green": "< 130",
+            "orange": "130-159",
+            "red": ">= 160"
+          }
+        }
+      },
+      "TG": {
+        "hitem_code": "TG",
+        "display_name": "三酸甘油脂",
+        "display_name_en": "Triglycerides",
+        "unit": "mg/dL",
+        "normal_range": {
+          "max": 150,
+          "reference": "< 150 mg/dL"
+        },
+        "thresholds": {
+          "normal": 150,
+          "warning": 200,
+          "critical": 500
+        },
+        "alert_rules": {
+          "education_required": "> 200",
+          "color_coding": {
+            "green": "< 150",
+            "orange": "150-199",
+            "red": ">= 200"
+          }
+        }
+      },
+      "BMI": {
+        "hitem_code": "BMI",
+        "display_name": "身體質量指數",
+        "display_name_en": "Body Mass Index",
+        "unit": "kg/m²",
+        "normal_range": {
+          "min": 18.5,
+          "max": 24,
+          "reference": "18.5-24 kg/m²"
+        },
+        "thresholds": {
+          "underweight": 18.5,
+          "normal": 24,
+          "overweight": 27,
+          "obese": 30
+        },
+        "alert_rules": {
+          "education_required": "> 27 OR < 18.5",
+          "color_coding": {
+            "green": "18.5-24",
+            "orange": "24.1-27 OR 17-18.4",
+            "red": ">= 27 OR < 17"
+          }
+        }
+      }
+    }
+  },
+
+  "VIRUS": {
+    "_category_name": "病毒/肝炎檢驗",
+    "items": {
+      "AntiHCV": {
+        "hitem_code": "AntiHCV",
+        "display_name": "C型肝炎抗體",
+        "display_name_en": "Anti-HCV Antibody",
+        "unit": "",
+        "result_type": "qualitative",
+        "normal_value": "Non-reactive",
+        "abnormal_value": "Reactive",
+        "alert_rules": {
+          "education_required": "Reactive",
+          "color_coding": {
+            "green": "Non-reactive",
+            "red": "Reactive"
+          }
+        }
+      },
+      "HBsAg": {
+        "hitem_code": "HBsAg",
+        "display_name": "B型肝炎表面抗原",
+        "display_name_en": "Hepatitis B Surface Antigen",
+        "unit": "",
+        "result_type": "qualitative",
+        "normal_value": "Non-reactive",
+        "abnormal_value": "Reactive",
+        "alert_rules": {
+          "education_required": "Reactive",
+          "color_coding": {
+            "green": "Non-reactive",
+            "red": "Reactive"
+          }
+        }
+      }
+    }
+  },
+
+  "VACCINE": {
+    "_category_name": "疫苗施打狀態",
+    "items": {
+      "Zostavax": {
+        "vaccine_code": "Zostavax",
+        "display_name": "帶狀皰疹疫苗",
+        "display_name_en": "Zoster Vaccine",
+        "recommended_age": "50+",
+        "doses": 1,
+        "validity_years": 5,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      },
+      "Prevenar": {
+        "vaccine_code": "Prevenar",
+        "display_name": "肺炎鏈球菌疫苗",
+        "display_name_en": "Pneumococcal Vaccine",
+        "recommended_age": "65+",
+        "doses": 1,
+        "validity_years": 5,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      },
+      "RSV": {
+        "vaccine_code": "RSV",
+        "display_name": "呼吸道融合病毒疫苗",
+        "display_name_en": "RSV Vaccine",
+        "recommended_age": "60+",
+        "doses": 1,
+        "validity_years": 1,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      }
+    }
+  },
+
+  "EXAM": {
+    "_category_name": "檢查追蹤項目",
+    "items": {
+      "AbdomenUltrasound": {
+        "exam_code": "AbdomenUltrasound",
+        "display_name": "腹部超音波",
+        "display_name_en": "Abdominal Ultrasound",
+        "recommended_interval_months": 12,
+        "overdue_threshold_months": 15,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      },
+      "Gastroscopy": {
+        "exam_code": "Gastroscopy",
+        "display_name": "胃鏡",
+        "display_name_en": "Gastroscopy",
+        "recommended_interval_months": 24,
+        "overdue_threshold_months": 30,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      },
+      "Colonoscopy": {
+        "exam_code": "Colonoscopy",
+        "display_name": "大腸鏡",
+        "display_name_en": "Colonoscopy",
+        "recommended_interval_months": 60,
+        "overdue_threshold_months": 72,
+        "tracking_field": "dno",
+        "tracking_table": "CO02M"
+      }
+    }
+  },
+
+  "_mapping_notes": {
+    "hitem_code": "對應到 CO18H.hitem 欄位的實際代碼，需依據診所 HIS 系統實際代碼調整",
+    "vaccine_code": "對應到 CO02M.dno 欄位的疫苗代碼",
+    "exam_code": "對應到 CO02M.dno 欄位的檢查代碼",
+    "result_type": "quantitative=數值型（有單位）, qualitative=定性型（陽性/陰性）",
+    "tracking_table": "追蹤資料來源表（CO02M=醫令, CO18H=檢驗）"
+  }
+}

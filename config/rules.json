@@ -1,0 +1,444 @@
+{
+  "_comment": "Smart Action List 規則定義檔 - 診所櫃檯智慧助手",
+  "_version": "1.0",
+  "_last_updated": "2025-11-22",
+  "_description": "定義衛教提醒、檢查追蹤、資料補填等規則，由規則引擎評估後產生待辦事項清單",
+
+  "rules": [
+    {
+      "id": "dm_education_critical",
+      "name": "糖尿病衛教（高風險）",
+      "type": "education",
+      "category": "DM",
+      "priority": 1,
+      "enabled": true,
+      "condition": {
+        "field": "HBA1C",
+        "operator": ">=",
+        "value": 9.0,
+        "lookback_days": 180
+      },
+      "action": {
+        "icon": "🔴",
+        "color": "red",
+        "title": "需安排糖尿病衛教（高風險）",
+        "message_template": "HBA1C：{value}%（檢驗日：{date}），建議立即安排衛教與回診",
+        "suggested_actions": [
+          "安排衛教師諮詢",
+          "開立 HBA1C 追蹤檢驗單",
+          "提醒醫師調整用藥"
+        ]
+      }
+    },
+    {
+      "id": "dm_education_warning",
+      "name": "糖尿病衛教（需注意）",
+      "type": "education",
+      "category": "DM",
+      "priority": 2,
+      "enabled": true,
+      "condition": {
+        "field": "HBA1C",
+        "operator": ">",
+        "value": 7.0,
+        "operator_and": "<",
+        "value_and": 9.0,
+        "lookback_days": 180
+      },
+      "action": {
+        "icon": "🟠",
+        "color": "orange",
+        "title": "需安排糖尿病衛教",
+        "message_template": "HBA1C：{value}%（檢驗日：{date}），建議安排衛教",
+        "suggested_actions": [
+          "安排衛教師諮詢",
+          "提供飲食控制衛教單"
+        ]
+      }
+    },
+    {
+      "id": "ckd_education",
+      "name": "慢性腎臟病衛教",
+      "type": "education",
+      "category": "DM",
+      "priority": 2,
+      "enabled": true,
+      "condition": {
+        "field": "eGFR",
+        "operator": "<",
+        "value": 60,
+        "lookback_days": 180
+      },
+      "action": {
+        "icon": "🟠",
+        "color": "orange",
+        "title": "需安排腎臟病衛教",
+        "message_template": "eGFR：{value} mL/min/1.73m²（檢驗日：{date}），建議安排腎臟病衛教",
+        "suggested_actions": [
+          "安排腎臟科會診",
+          "提供低蛋白飲食衛教單",
+          "提醒避免腎毒性藥物"
+        ]
+      }
+    },
+    {
+      "id": "hyperlipidemia_education",
+      "name": "高血脂衛教",
+      "type": "education",
+      "category": "HTN_LIP",
+      "priority": 3,
+      "enabled": true,
+      "condition": {
+        "logic": "OR",
+        "conditions": [
+          {
+            "field": "CHOL",
+            "operator": ">=",
+            "value": 240
+          },
+          {
+            "field": "LDL",
+            "operator": ">=",
+            "value": 160
+          },
+          {
+            "field": "TG",
+            "operator": ">=",
+            "value": 200
+          }
+        ],
+        "lookback_days": 180
+      },
+      "action": {
+        "icon": "🟡",
+        "color": "orange",
+        "title": "需安排高血脂衛教",
+        "message_template": "血脂異常（檢驗日：{date}），建議安排飲食與用藥衛教",
+        "suggested_actions": [
+          "提供低油飲食衛教單",
+          "確認降血脂藥物順從性"
+        ]
+      }
+    },
+    {
+      "id": "hcv_followup",
+      "name": "C型肝炎陽性追蹤",
+      "type": "education",
+      "category": "VIRUS",
+      "priority": 1,
+      "enabled": true,
+      "condition": {
+        "field": "AntiHCV",
+        "operator": "==",
+        "value": "Reactive"
+      },
+      "action": {
+        "icon": "🔴",
+        "color": "red",
+        "title": "C型肝炎陽性，需追蹤治療",
+        "message_template": "Anti-HCV：Reactive（檢驗日：{date}），建議轉介肝膽科評估治療",
+        "suggested_actions": [
+          "安排肝膽科會診",
+          "開立 HCV RNA 檢驗單",
+          "提供肝炎衛教單"
+        ]
+      }
+    },
+    {
+      "id": "hbv_followup",
+      "name": "B型肝炎帶原追蹤",
+      "type": "education",
+      "category": "VIRUS",
+      "priority": 2,
+      "enabled": true,
+      "condition": {
+        "field": "HBsAg",
+        "operator": "==",
+        "value": "Reactive"
+      },
+      "action": {
+        "icon": "🟠",
+        "color": "orange",
+        "title": "B型肝炎帶原，需定期追蹤",
+        "message_template": "HBsAg：Reactive（檢驗日：{date}），建議每 6 個月追蹤肝功能與腹部超音波",
+        "suggested_actions": [
+          "開立 GOT/GPT 檢驗單",
+          "安排腹部超音波",
+          "提供肝炎衛教單"
+        ]
+      }
+    },
+    {
+      "id": "ultrasound_overdue",
+      "name": "腹部超音波逾期",
+      "type": "exam_tracking",
+      "category": "EXAM",
+      "priority": 2,
+      "enabled": true,
+      "condition": {
+        "exam_type": "AbdomenUltrasound",
+        "days_since_last_exam": ">",
+        "value": 365,
+        "source_table": "CO02M",
+        "source_field": "dno",
+        "exam_codes": ["US001", "US002", "超音波"]
+      },
+      "action": {
+        "icon": "🔵",
+        "color": "blue",
+        "title": "腹部超音波已逾期",
+        "message_template": "上次檢查：{last_exam_date}，已逾 {days_overdue} 天（建議週期：1 年）",
+        "suggested_actions": [
+          "安排腹部超音波檢查",
+          "確認是否有肝炎帶原或肝硬化病史"
+        ]
+      }
+    },
+    {
+      "id": "gastroscopy_overdue",
+      "name": "胃鏡逾期",
+      "type": "exam_tracking",
+      "category": "EXAM",
+      "priority": 3,
+      "enabled": true,
+      "condition": {
+        "exam_type": "Gastroscopy",
+        "days_since_last_exam": ">",
+        "value": 730,
+        "source_table": "CO02M",
+        "source_field": "dno",
+        "exam_codes": ["GS001", "胃鏡", "上消化道內視鏡"]
+      },
+      "action": {
+        "icon": "🔵",
+        "color": "blue",
+        "title": "胃鏡已逾期",
+        "message_template": "上次檢查：{last_exam_date}，已逾 {days_overdue} 天（建議週期：2 年）",
+        "suggested_actions": [
+          "安排胃鏡檢查",
+          "確認是否有胃食道逆流或胃潰瘍病史"
+        ]
+      }
+    },
+    {
+      "id": "colonoscopy_overdue",
+      "name": "大腸鏡逾期",
+      "type": "exam_tracking",
+      "category": "EXAM",
+      "priority": 3,
+      "enabled": true,
+      "condition": {
+        "exam_type": "Colonoscopy",
+        "days_since_last_exam": ">",
+        "value": 1825,
+        "source_table": "CO02M",
+        "source_field": "dno",
+        "exam_codes": ["CS001", "大腸鏡", "下消化道內視鏡"]
+      },
+      "action": {
+        "icon": "🔵",
+        "color": "blue",
+        "title": "大腸鏡已逾期",
+        "message_template": "上次檢查：{last_exam_date}，已逾 {days_overdue} 天（建議週期：5 年）",
+        "suggested_actions": [
+          "安排大腸鏡檢查",
+          "確認是否有大腸瘜肉或家族史"
+        ]
+      }
+    },
+    {
+      "id": "zostavax_recommendation",
+      "name": "建議施打帶狀皰疹疫苗",
+      "type": "vaccine_promotion",
+      "category": "VACCINE",
+      "priority": 4,
+      "enabled": true,
+      "condition": {
+        "patient_age": ">=",
+        "value": 50,
+        "vaccine_code": "Zostavax",
+        "not_received_within_years": 5,
+        "source_table": "CO02M",
+        "source_field": "dno"
+      },
+      "action": {
+        "icon": "💉",
+        "color": "green",
+        "title": "建議施打帶狀皰疹疫苗",
+        "message_template": "病患年齡 {age} 歲，建議施打帶狀皰疹疫苗（Zostavax）",
+        "suggested_actions": [
+          "說明疫苗效益與自費價格",
+          "確認是否有免疫抑制禁忌症"
+        ]
+      }
+    },
+    {
+      "id": "prevenar_recommendation",
+      "name": "建議施打肺炎鏈球菌疫苗",
+      "type": "vaccine_promotion",
+      "category": "VACCINE",
+      "priority": 4,
+      "enabled": true,
+      "condition": {
+        "patient_age": ">=",
+        "value": 65,
+        "vaccine_code": "Prevenar",
+        "not_received_within_years": 5,
+        "source_table": "CO02M",
+        "source_field": "dno"
+      },
+      "action": {
+        "icon": "💉",
+        "color": "green",
+        "title": "建議施打肺炎鏈球菌疫苗",
+        "message_template": "病患年齡 {age} 歲，建議施打肺炎鏈球菌疫苗（Prevenar）",
+        "suggested_actions": [
+          "說明疫苗效益與公費/自費資格",
+          "確認是否有慢性病史（糖尿病、心臟病）"
+        ]
+      }
+    },
+    {
+      "id": "contact_info_incomplete",
+      "name": "聯絡資料不完整",
+      "type": "data_completion",
+      "category": "PATIENT_INFO",
+      "priority": 5,
+      "enabled": true,
+      "condition": {
+        "logic": "OR",
+        "conditions": [
+          {
+            "field": "mtelh",
+            "operator": "IS_NULL_OR_EMPTY"
+          },
+          {
+            "field": "maddr",
+            "operator": "IS_NULL_OR_EMPTY"
+          }
+        ],
+        "source_table": "CO01M"
+      },
+      "action": {
+        "icon": "🟡",
+        "color": "orange",
+        "title": "聯絡資料不完整",
+        "message_template": "缺少：{missing_fields}，請協助病患補填",
+        "suggested_actions": [
+          "詢問病患手機號碼",
+          "詢問病患居住地址",
+          "更新 HIS 系統病患資料"
+        ]
+      }
+    },
+    {
+      "id": "address_incomplete",
+      "name": "地址資料不完整",
+      "type": "data_completion",
+      "category": "PATIENT_INFO",
+      "priority": 6,
+      "enabled": true,
+      "condition": {
+        "field": "maddr",
+        "operator": "IS_NULL_OR_EMPTY",
+        "source_table": "CO01M"
+      },
+      "action": {
+        "icon": "⚪",
+        "color": "gray",
+        "title": "請補填地址資料",
+        "message_template": "病患地址欄位為空，請協助補填",
+        "suggested_actions": [
+          "詢問病患居住地址",
+          "更新 HIS 系統"
+        ]
+      }
+    },
+    {
+      "id": "phone_incomplete",
+      "name": "電話資料不完整",
+      "type": "data_completion",
+      "category": "PATIENT_INFO",
+      "priority": 6,
+      "enabled": true,
+      "condition": {
+        "field": "mtelh",
+        "operator": "IS_NULL_OR_EMPTY",
+        "source_table": "CO01M"
+      },
+      "action": {
+        "icon": "⚪",
+        "color": "gray",
+        "title": "請補填手機號碼",
+        "message_template": "病患手機欄位為空，請協助補填",
+        "suggested_actions": [
+          "詢問病患手機號碼",
+          "更新 HIS 系統"
+        ]
+      }
+    }
+  ],
+
+  "_rule_execution_order": {
+    "description": "規則評估順序由 priority 決定（數字越小優先級越高）",
+    "priority_levels": {
+      "1": "Critical - 立即需要處理（紅色警示）",
+      "2": "High - 高優先級（橘色警示）",
+      "3": "Medium - 中優先級（藍色/黃色）",
+      "4": "Low - 低優先級（綠色提示）",
+      "5-6": "Info - 資訊性提示（灰色）"
+    }
+  },
+
+  "_operator_reference": {
+    "comparison_operators": {
+      "==": "等於",
+      "!=": "不等於",
+      ">": "大於",
+      ">=": "大於等於",
+      "<": "小於",
+      "<=": "小於等於"
+    },
+    "special_operators": {
+      "IS_NULL_OR_EMPTY": "欄位為空或 NULL",
+      "IS_NOT_NULL": "欄位有值",
+      "CONTAINS": "包含（字串）",
+      "NOT_CONTAINS": "不包含（字串）",
+      "IN": "在列表中",
+      "NOT_IN": "不在列表中"
+    },
+    "logic_operators": {
+      "AND": "所有條件都必須符合",
+      "OR": "任一條件符合即可"
+    }
+  },
+
+  "_condition_fields_mapping": {
+    "lab_values": {
+      "HBA1C": "lab_results_wide.hba1c",
+      "eGFR": "lab_results_wide.egfr",
+      "CHOL": "lab_results_wide.chol",
+      "LDL": "lab_results_wide.ldl_c",
+      "TG": "lab_results_wide.tg",
+      "AntiHCV": "lab_results_wide.anti_hcv",
+      "HBsAg": "lab_results_wide.hbsag"
+    },
+    "patient_info": {
+      "mtelh": "CO01M.mtelh",
+      "maddr": "CO01M.maddr",
+      "patient_age": "calculated from CO01M.mbirthdt"
+    },
+    "exam_tracking": {
+      "last_exam_date": "MAX(CO02M.idate) WHERE dno IN exam_codes",
+      "days_since_last_exam": "DATEDIFF(TODAY, last_exam_date)"
+    }
+  },
+
+  "_implementation_notes": {
+    "lookback_days": "從今天往回推算 N 天內的檢驗資料，避免使用過舊的數據",
+    "exam_codes": "實際檢查代碼需依診所 HIS 系統調整，可能為數字代碼或中文名稱",
+    "message_template": "使用 {variable} 語法插入動態資料，例如 {value}、{date}、{age}",
+    "suggested_actions": "僅供櫃檯參考，不會自動執行",
+    "enabled": "可停用特定規則而不需刪除定義，方便測試與調整"
+  }
+}
