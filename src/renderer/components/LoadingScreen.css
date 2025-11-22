@@ -1,0 +1,53 @@
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 60px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  min-width: 400px;
+}
+
+.loading-icon {
+  font-size: 64px;
+  color: #1890ff;
+  margin-bottom: 24px;
+}
+
+.loading-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 32px;
+}
+
+.loading-message {
+  margin-top: 24px;
+  font-size: 16px;
+  color: #666;
+  min-height: 24px;
+}
+
+/* 響應式調整 */
+@media (max-width: 600px) {
+  .loading-content {
+    min-width: 80%;
+    padding: 40px 20px;
+  }
+
+  .loading-title {
+    font-size: 24px;
+  }
+}

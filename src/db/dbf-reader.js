@@ -49,7 +49,7 @@ class DBFReader {
    * 預載入所有常用 DBF 表格到記憶體
    * 只載入近期資料（預設最近 3 年），減少記憶體占用
    */
-  async preloadAllTables() {
+  async preloadAllTables(progressCallback) {
     if (this.isPreloaded) {
       logger.info('DBF tables already preloaded, skipping');
       return;
@@ -77,8 +77,26 @@ class DBFReader {
       // CO01M 沒有日期欄位，載入全部
     };
 
+    const totalTables = this.preloadTables.length;
+    let currentTableIndex = 0;
+
     for (const tableName of this.preloadTables) {
       try {
+        currentTableIndex++;
+        const progress = Math.round((currentTableIndex / totalTables) * 100);
+
+        // 回報進度
+        if (progressCallback) {
+          progressCallback({
+            stage: 'preload',
+            tableName,
+            current: currentTableIndex,
+            total: totalTables,
+            progress,
+            message: `載入資料表 ${tableName} (${currentTableIndex}/${totalTables})`
+          });
+        }
+
         const tableStartTime = Date.now();
         const allRecords = await this.readDBFFromDisk(tableName);
 

@@ -9,6 +9,7 @@ let mainWindow = null;
 let configManager = null;
 let databaseManager = null;
 let syncManager = null;
+let isWindowVisible = false; // 追蹤視窗可見狀態（用於熱鍵切換）
 
 /**
  * 建立主視窗
@@ -42,16 +43,37 @@ function createWindow() {
       mainWindow.maximize();
     }
     mainWindow.show();
+    isWindowVisible = true;
+  });
+
+  // 監聽視窗顯示/隱藏事件
+  mainWindow.on('show', () => {
+    isWindowVisible = true;
+  });
+
+  mainWindow.on('hide', () => {
+    isWindowVisible = false;
+  });
+
+  mainWindow.on('minimize', () => {
+    isWindowVisible = false;
+  });
+
+  mainWindow.on('restore', () => {
+    isWindowVisible = true;
   });
 
   // 視窗關閉時清理
   mainWindow.on('closed', () => {
     mainWindow = null;
+    isWindowVisible = false;
   });
 }
 
 /**
  * 註冊全域熱鍵
+ * 按一次：顯示並置頂（alwaysOnTop）
+ * 再按一次：最小化
  */
 function registerGlobalHotkey() {
   const config = configManager.getConfig();
@@ -59,16 +81,33 @@ function registerGlobalHotkey() {
 
   try {
     const success = globalShortcut.register(hotkey, () => {
-      logger.info(`Global hotkey triggered: ${hotkey}`);
+      logger.info(`Global hotkey triggered: ${hotkey}, isWindowVisible: ${isWindowVisible}`);
 
-      if (mainWindow) {
+      if (!mainWindow) {
+        createWindow();
+        return;
+      }
+
+      if (isWindowVisible && !mainWindow.isMinimized()) {
+        // 視窗已顯示且未最小化 → 最小化
+        logger.info('Window visible, minimizing...');
+        mainWindow.minimize();
+      } else {
+        // 視窗未顯示或已最小化 → 恢復、顯示、置頂、聚焦
+        logger.info('Window hidden or minimized, showing and setting always on top...');
         if (mainWindow.isMinimized()) {
           mainWindow.restore();
         }
+        mainWindow.setAlwaysOnTop(true); // 置頂
         mainWindow.show();
         mainWindow.focus();
-      } else {
-        createWindow();
+
+        // 0.5秒後取消置頂（保持在最上層，但不永久置頂）
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setAlwaysOnTop(false);
+          }
+        }, 500);
       }
     });
 
@@ -97,9 +136,16 @@ async function initializeDatabase() {
   try {
     const config = configManager.getConfig();
 
+    // 進度回呼函數：轉發到前端
+    const progressCallback = (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('db-init-progress', progress);
+      }
+    };
+
     // 初始化資料庫管理器
     databaseManager = new DatabaseManager(config);
-    await databaseManager.initialize();
+    await databaseManager.initialize(progressCallback);
 
     // 初始化同步管理器
     syncManager = new SyncManager(config, databaseManager);
@@ -120,6 +166,15 @@ async function initializeDatabase() {
     logger.info('Database initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize database:', error);
+
+    // 發送錯誤到前端
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('db-init-error', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
+
     throw error;
   }
 }

@@ -29,4 +29,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<Object>} 設定物件
    */
   getConfig: () => ipcRenderer.invoke('get-config'),
+
+  /**
+   * 監聽資料庫初始化進度
+   * @param {Function} callback - 進度回呼函數
+   */
+  onDbInitProgress: (callback) => {
+    ipcRenderer.on('db-init-progress', (event, progress) => callback(progress));
+  },
+
+  /**
+   * 監聽資料庫初始化錯誤
+   * @param {Function} callback - 錯誤回呼函數
+   */
+  onDbInitError: (callback) => {
+    ipcRenderer.on('db-init-error', (event, error) => callback(error));
+  },
 });

@@ -20,8 +20,17 @@ class DatabaseManager {
   /**
    * 初始化資料庫
    */
-  async initialize() {
+  async initialize(progressCallback) {
     try {
+      // 回報進度：開始初始化
+      if (progressCallback) {
+        progressCallback({
+          stage: 'init',
+          progress: 0,
+          message: '初始化資料庫...'
+        });
+      }
+
       // 確保資料庫目錄存在
       const dbDir = path.dirname(this.config.database.sqlite_path);
       if (!fs.existsSync(dbDir)) {
@@ -35,19 +44,46 @@ class DatabaseManager {
 
       logger.info(`SQLite database opened: ${this.config.database.sqlite_path}`);
 
+      // 回報進度：SQLite 已開啟
+      if (progressCallback) {
+        progressCallback({
+          stage: 'init',
+          progress: 10,
+          message: 'SQLite 資料庫已開啟'
+        });
+      }
+
       // 建立資料表
       this.createTables();
 
       // 載入 LabCodeMap
       this.loadLabCodeMap();
 
+      // 回報進度：開始載入 DBF
+      if (progressCallback) {
+        progressCallback({
+          stage: 'init',
+          progress: 20,
+          message: '準備載入 DBF 資料...'
+        });
+      }
+
       // 初始化 DBF Reader
       this.dbfReader = new DBFReader(this.config);
 
       // 預載入所有常用 DBF 表格到記憶體（效能優化）
       logger.info('Preloading DBF tables into memory...');
-      await this.dbfReader.preloadAllTables();
+      await this.dbfReader.preloadAllTables(progressCallback);
       logger.info('DBF tables preloaded successfully');
+
+      // 回報進度：完成
+      if (progressCallback) {
+        progressCallback({
+          stage: 'complete',
+          progress: 100,
+          message: '資料庫載入完成'
+        });
+      }
 
       // 檢查是否需要初始匯入
       const syncMeta = this.getSyncMeta();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from 'antd';
 import SearchBar from './components/SearchBar';
 import PatientHeader from './components/PatientHeader';
@@ -8,6 +8,7 @@ import VisitHistory from './components/VisitHistory';
 import ChronicDiseaseManagement from './components/ChronicDiseaseManagement';
 import ExaminationHistory from './components/ExaminationHistory';
 import SyncStatus from './components/SyncStatus';
+import LoadingScreen from './components/LoadingScreen';
 import './App.css';
 
 const { Header, Content, Sider } = Layout;
@@ -15,6 +16,26 @@ const { Header, Content, Sider } = Layout;
 function App() {
   const [patientData, setPatientData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [dbReady, setDbReady] = useState(false); // 資料庫是否載入完成
+
+  // 監聽資料庫初始化進度
+  useEffect(() => {
+    if (window.electronAPI && window.electronAPI.onDbInitProgress) {
+      window.electronAPI.onDbInitProgress((progress) => {
+        if (progress.stage === 'complete') {
+          // 載入完成，延遲 500ms 再隱藏 loading screen（讓使用者看到 100%）
+          setTimeout(() => {
+            setDbReady(true);
+          }, 500);
+        }
+      });
+    }
+  }, []);
+
+  // 如果資料庫尚未載入完成，顯示 LoadingScreen
+  if (!dbReady) {
+    return <LoadingScreen />;
+  }
 
   /**
    * 處理病患查詢
