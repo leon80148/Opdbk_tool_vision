@@ -1,0 +1,21 @@
+.settings-form {
+  margin-top: 16px;
+}
+
+.settings-hint {
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.settings-hint p {
+  margin: 0;
+  color: #1d39c4;
+  font-size: 14px;
+}
+
+.settings-hint strong {
+  font-weight: 600;
+}

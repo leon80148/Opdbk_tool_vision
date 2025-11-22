@@ -194,6 +194,33 @@ class ConfigManager {
 
     return this.config[section];
   }
+
+  /**
+   * 儲存設定到檔案
+   */
+  async save(newConfig) {
+    try {
+      // 合併新設定到目前設定
+      for (const section in newConfig) {
+        if (!this.config[section]) {
+          this.config[section] = {};
+        }
+        Object.assign(this.config[section], newConfig[section]);
+      }
+
+      // 轉換成 INI 格式
+      const iniContent = ini.stringify(this.config);
+
+      // 寫入檔案
+      fs.writeFileSync(this.configPath, iniContent, 'utf-8');
+
+      logger.info('Config saved successfully');
+      return true;
+    } catch (error) {
+      logger.error('Failed to save config:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = ConfigManager;

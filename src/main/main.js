@@ -17,16 +17,28 @@ let isWindowVisible = false; // 追蹤視窗可見狀態（用於熱鍵切換）
 function createWindow() {
   const config = configManager.getConfig();
 
-  mainWindow = new BrowserWindow({
+  // 視窗選項
+  const windowOptions = {
     width: config.ui?.window_width || 1200,
     height: config.ui?.window_height || 800,
     show: false,
+    frame: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-  });
+  };
+
+  // 如果有設定視窗位置，則使用設定的位置
+  if (config.ui?.window_x !== null && config.ui?.window_x !== undefined) {
+    windowOptions.x = config.ui.window_x;
+  }
+  if (config.ui?.window_y !== null && config.ui?.window_y !== undefined) {
+    windowOptions.y = config.ui.window_y;
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   // 開發模式：載入 Vite 開發伺服器
   // 生產模式：載入建置後的檔案
@@ -61,6 +73,22 @@ function createWindow() {
 
   mainWindow.on('restore', () => {
     isWindowVisible = true;
+  });
+
+  // 視窗關閉前儲存位置和大小
+  mainWindow.on('close', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const bounds = mainWindow.getBounds();
+      const config = configManager.getConfig();
+
+      // 更新設定（不儲存到檔案，下次啟動時會使用）
+      config.ui.window_x = bounds.x;
+      config.ui.window_y = bounds.y;
+      config.ui.window_width = bounds.width;
+      config.ui.window_height = bounds.height;
+
+      logger.info(`Window bounds saved: ${JSON.stringify(bounds)}`);
+    }
   });
 
   // 視窗關閉時清理
@@ -225,6 +253,55 @@ function setupIpcHandlers() {
       return { success: true, data: config };
     } catch (error) {
       logger.error('Error getting config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 儲存設定
+  ipcMain.handle('save-config', async (event, newConfig) => {
+    try {
+      logger.info('Saving config:', newConfig);
+      await configManager.save(newConfig);
+
+      // 如果熱鍵有變更，重新註冊
+      if (newConfig.hotkey?.global) {
+        const currentHotkey = configManager.get('hotkey', 'global');
+        if (currentHotkey !== newConfig.hotkey.global) {
+          logger.info('Hotkey changed, re-registering...');
+          globalShortcut.unregisterAll();
+          registerGlobalHotkey();
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Error saving config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 取得目前視窗位置和大小
+  ipcMain.handle('get-window-bounds', async () => {
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const bounds = mainWindow.getBounds();
+        return { success: true, data: bounds };
+      }
+      return { success: false, error: 'Window not available' };
+    } catch (error) {
+      logger.error('Error getting window bounds:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 關閉應用程式
+  ipcMain.handle('close-app', async () => {
+    try {
+      logger.info('Closing application via IPC');
+      app.quit();
+      return { success: true };
+    } catch (error) {
+      logger.error('Error closing app:', error);
       return { success: false, error: error.message };
     }
   });

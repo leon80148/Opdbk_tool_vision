@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Layout } from 'antd';
+import { Layout, Button, Space } from 'antd';
+import { SettingOutlined, CloseOutlined } from '@ant-design/icons';
 import SearchBar from './components/SearchBar';
 import PatientHeader from './components/PatientHeader';
 import PreventiveCare from './components/PreventiveCare';
@@ -7,16 +8,17 @@ import AppointmentRecords from './components/AppointmentRecords';
 import VisitHistory from './components/VisitHistory';
 import ChronicDiseaseManagement from './components/ChronicDiseaseManagement';
 import ExaminationHistory from './components/ExaminationHistory';
-import SyncStatus from './components/SyncStatus';
+import Settings from './components/Settings';
 import LoadingScreen from './components/LoadingScreen';
 import './App.css';
 
-const { Header, Content, Sider } = Layout;
+const { Header, Content } = Layout;
 
 function App() {
   const [patientData, setPatientData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dbReady, setDbReady] = useState(false); // 資料庫是否載入完成
+  const [settingsVisible, setSettingsVisible] = useState(false); // 設定對話框顯示狀態
 
   // 監聽資料庫初始化進度
   useEffect(() => {
@@ -59,11 +61,52 @@ function App() {
     }
   };
 
+  /**
+   * 開啟設定對話框
+   */
+  const handleOpenSettings = () => {
+    setSettingsVisible(true);
+  };
+
+  /**
+   * 關閉設定對話框
+   */
+  const handleCloseSettings = () => {
+    setSettingsVisible(false);
+  };
+
+  /**
+   * 關閉應用程式
+   */
+  const handleCloseApp = () => {
+    if (window.electronAPI && window.electronAPI.closeApp) {
+      window.electronAPI.closeApp();
+    }
+  };
+
   return (
     <Layout className="app-layout">
       <Header className="app-header">
         <div className="header-title">安家診所掛號助手</div>
-        <SyncStatus />
+        <Space size="middle" className="header-actions">
+          <Button
+            type="text"
+            icon={<SettingOutlined />}
+            onClick={handleOpenSettings}
+            style={{ color: 'white' }}
+          >
+            設定
+          </Button>
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={handleCloseApp}
+            style={{ color: 'white' }}
+            danger
+          >
+            關閉
+          </Button>
+        </Space>
       </Header>
 
       <Content className="app-content">
@@ -120,6 +163,9 @@ function App() {
           </div>
         )}
       </Content>
+
+      {/* 設定對話框 */}
+      <Settings visible={settingsVisible} onClose={handleCloseSettings} />
     </Layout>
   );
 }

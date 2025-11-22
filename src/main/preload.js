@@ -31,6 +31,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getConfig: () => ipcRenderer.invoke('get-config'),
 
   /**
+   * 儲存設定
+   * @param {Object} config - 設定物件
+   * @returns {Promise<Object>} 儲存結果
+   */
+  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
+
+  /**
+   * 取得目前視窗位置和大小
+   * @returns {Promise<Object>} 視窗邊界資訊
+   */
+  getCurrentWindowBounds: () => ipcRenderer.invoke('get-window-bounds').then(result => result.success ? result.data : null),
+
+  /**
+   * 關閉應用程式
+   * @returns {Promise<void>}
+   */
+  closeApp: () => ipcRenderer.invoke('close-app'),
+
+  /**
    * 監聽資料庫初始化進度
    * @param {Function} callback - 進度回呼函數
    */

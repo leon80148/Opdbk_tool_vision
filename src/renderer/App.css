@@ -3,17 +3,31 @@
 }
 
 .app-header {
-  background: #001529;
+  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
   color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .header-title {
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.header-actions .ant-btn {
+  font-size: 14px;
+}
+
+.header-actions .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .app-content {
