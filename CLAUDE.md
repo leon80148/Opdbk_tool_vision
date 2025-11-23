@@ -481,10 +481,13 @@ node test-patient-27.js      # 測試特定病患流程
 - `tests/*.test.js` - Jest 單元測試
 
 ### 文件
-- `README.md` - 使用者指南
+- `README.md` - 專案說明與快速開始指南
+- `USER_MANUAL.md` - 詳細使用手冊（操作指引、預防保健規則）
+- `CLAUDE.md` - 開發文件（給 AI 助手的技術文件）
 - `OPD_TOOLIT_PRD.MD` - 產品需求文件
 - `database_schema.MD` - DBF 結構參考
-- `*_FIX_SUMMARY.md` - 錯誤修復文件
+- `CHANGELOG.md` - 變更日誌
+- `*_FIX_SUMMARY.md` - 錯誤修復文件（歷史記錄）
 
 ---
 
@@ -918,5 +921,5 @@ Client 端（輕量化）
 
 ---
 
-**最後更新**：2025-11-22
+**最後更新**：2025-11-23
 **目標讀者**：未來在此儲存庫工作的 Claude Code 實例
