@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const ini = require('ini');
+const { app } = require('electron');
 const logger = require('./logger');
 
 /**
@@ -9,7 +10,17 @@ const logger = require('./logger');
  */
 class ConfigManager {
   constructor(configPath = null) {
-    this.configPath = configPath || path.join(__dirname, '../../config.ini');
+    // 打包後使用 userData 目錄，開發時使用專案根目錄
+    const userDataPath = app ? app.getPath('userData') : __dirname;
+    const defaultConfigPath = app.isPackaged
+      ? path.join(userDataPath, 'config.ini')
+      : path.join(__dirname, '../../config.ini');
+
+    this.configPath = configPath || defaultConfigPath;
+    this.exampleConfigPath = app.isPackaged
+      ? path.join(path.dirname(app.getPath('exe')), 'resources', 'config.ini.example')
+      : path.join(__dirname, '../../config.ini.example');
+
     this.config = null;
     this.defaults = this.getDefaultConfig();
   }
@@ -18,12 +29,19 @@ class ConfigManager {
    * 取得預設設定
    */
   getDefaultConfig() {
+    // 打包後使用 userData 或安裝目錄，開發時使用專案目錄
+    const userDataPath = app ? app.getPath('userData') : __dirname;
+    const resourcesPath = app && app.isPackaged
+      ? path.join(path.dirname(app.getPath('exe')), 'resources')
+      : path.join(__dirname, '../..');
+
     return {
       database: {
-        dbf_root: path.join(__dirname, '../../data'),
-        sqlite_path: path.join(__dirname, '../../data/lab_cache.db'),
+        dbf_root: path.join(userDataPath, 'data'),
+        sqlite_path: path.join(userDataPath, 'data', 'lab_cache.db'),
         connection_mode: 'odbc',
         encoding: 'big5',
+        preload_years_back: 3,
       },
       hotkey: {
         global: 'Ctrl+Alt+C',
@@ -31,7 +49,7 @@ class ConfigManager {
         conflict_handling: 'warn',
       },
       labs: {
-        lab_code_map: path.join(__dirname, '../../config/lab_codes.json'),
+        lab_code_map: path.join(resourcesPath, 'config', 'lab_codes.json'),
         data_retention_years: 3,
         decimal_places: 2,
       },
@@ -43,21 +61,22 @@ class ConfigManager {
         batch_size: 5000,
       },
       rules: {
-        rules_definition: path.join(__dirname, '../../config/rules.json'),
+        rules_definition: path.join(resourcesPath, 'config', 'rules.json'),
         cache_ttl_seconds: 60,
         max_action_items: 10,
       },
       ui: {
         window_width: 1200,
         window_height: 800,
-        start_maximized: false,
+        start_maximized: true,
+        hide_menu_bar: true,
         theme: 'light',
         font_size: 14,
         auto_pad_patient_id: true,
       },
       logging: {
         log_level: 'info',
-        log_file: path.join(__dirname, '../../logs/app.log'),
+        log_file: path.join(userDataPath, 'logs', 'app.log'),
         log_max_size_mb: 10,
         log_max_files: 5,
         mask_sensitive_data: true,
@@ -81,6 +100,11 @@ class ConfigManager {
    */
   async load() {
     try {
+      // 首次啟動：從 example 複製 config.ini
+      if (!fs.existsSync(this.configPath)) {
+        await this.createDefaultConfig();
+      }
+
       if (fs.existsSync(this.configPath)) {
         logger.info(`Loading config from: ${this.configPath}`);
 
@@ -104,6 +128,36 @@ class ConfigManager {
       logger.error('Failed to load config:', error);
       this.config = this.defaults;
       return this.config;
+    }
+  }
+
+  /**
+   * 建立預設設定檔（從 example 複製）
+   */
+  async createDefaultConfig() {
+    try {
+      logger.info('Creating default config.ini from example...');
+
+      // 確保 userData 目錄存在
+      const configDir = path.dirname(this.configPath);
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+      }
+
+      // 嘗試從 example 複製
+      if (fs.existsSync(this.exampleConfigPath)) {
+        fs.copyFileSync(this.exampleConfigPath, this.configPath);
+        logger.info(`Config created from example: ${this.configPath}`);
+      } else {
+        // 無 example 檔案，建立最小設定檔
+        logger.warn('config.ini.example not found, creating minimal config');
+        const minimalConfig = ini.stringify(this.defaults);
+        fs.writeFileSync(this.configPath, minimalConfig, 'utf-8');
+        logger.info(`Minimal config created: ${this.configPath}`);
+      }
+    } catch (error) {
+      logger.error('Failed to create default config:', error);
+      throw error;
     }
   }
 
@@ -146,16 +200,19 @@ class ConfigManager {
    * 驗證設定
    */
   validateConfig() {
-    const errors = [];
+    const warnings = [];
 
-    // 驗證 DBF 根目錄
+    // 警告 DBF 根目錄不存在（不阻止啟動，使用者可能還沒設定）
     if (!fs.existsSync(this.config.database.dbf_root)) {
-      errors.push(`DBF root directory not found: ${this.config.database.dbf_root}`);
+      warnings.push(`DBF root directory not found: ${this.config.database.dbf_root}`);
+      logger.warn(`DBF root directory not found: ${this.config.database.dbf_root}`);
+      logger.warn('Please configure dbf_root in config.ini');
     }
 
-    // 驗證 LabCodeMap 檔案
+    // 驗證 LabCodeMap 檔案（必須存在）
     if (!fs.existsSync(this.config.labs.lab_code_map)) {
-      errors.push(`LabCodeMap file not found: ${this.config.labs.lab_code_map}`);
+      logger.error(`LabCodeMap file not found: ${this.config.labs.lab_code_map}`);
+      // 不拋出錯誤，使用預設值
     }
 
     // 驗證同步間隔
@@ -163,12 +220,11 @@ class ConfigManager {
       logger.warn('Sync interval is negative, periodic sync will be disabled');
     }
 
-    if (errors.length > 0) {
-      logger.error('Config validation errors:', errors);
-      throw new Error(`Config validation failed: ${errors.join(', ')}`);
+    if (warnings.length > 0) {
+      logger.warn('Config validation warnings:', warnings);
+    } else {
+      logger.info('Config validation passed');
     }
-
-    logger.info('Config validation passed');
   }
 
   /**

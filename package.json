@@ -57,8 +57,17 @@
     "files": [
       "src/main/**/*",
       "dist-renderer/**/*",
-      "config/**/*",
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "config",
+        "to": "config"
+      },
+      {
+        "from": "config.ini.example",
+        "to": "config.ini.example"
+      }
     ],
     "win": {
       "target": [

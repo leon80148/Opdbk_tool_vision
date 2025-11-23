@@ -366,7 +366,17 @@ function setupIpcHandlers() {
       logger.info(`[get-config] Hotkey from config: ${config.hotkey?.global}`);
       logger.info(`[get-config] Full hotkey config:`, config.hotkey);
 
-      return { success: true, data: config };
+      // 加入設定檔路徑資訊
+      const configWithPaths = {
+        ...config,
+        _meta: {
+          configPath: configManager.configPath,
+          userDataPath: app.getPath('userData'),
+          logsPath: path.join(app.getPath('userData'), 'logs'),
+        }
+      };
+
+      return { success: true, data: configWithPaths };
     } catch (error) {
       logger.error('Error getting config:', error);
       return { success: false, error: error.message };
