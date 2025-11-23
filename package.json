@@ -1,6 +1,6 @@
 {
   "name": "anchia-opd-toolkit",
-  "version": "4.4.0",
+  "version": "0.9.0",
   "description": "安家診所掛號助手 - Anchia Clinic Registration Assistant",
   "main": "src/main/main.js",
   "author": "Anchia Clinic",
