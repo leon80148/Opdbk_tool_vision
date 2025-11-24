@@ -135,7 +135,7 @@
      - CO01M.DBF（病患主資料）
      - CO02M.DBF（處方記錄）
      - CO02F.DBF（處方明細）
-     - CO03M.DBF（帳務摘要）
+     - CO03M.DBF（就醫紀錄）
      - CO03L.DBF（帳務明細）
      - co05b.DBF（預約記錄）
 
@@ -356,7 +356,7 @@ IPC: 'query-patient' → 主程序
 DatabaseManager.queryPatient()
   ├── 從記憶體快取查詢 CO01M（基本資料）
   ├── 從記憶體快取查詢 CO02M（處方記錄）
-  ├── 從記憶體快取查詢 CO03M（帳務記錄）
+  ├── 從記憶體快取查詢 CO03M（就醫紀錄）
   ├── 從記憶體快取查詢 co05b（預約記錄）
   ├── 從記憶體快取查詢 CO02F（檢查記錄）
   └── 從 SQLite 查詢檢驗結果（若需要）
@@ -484,7 +484,6 @@ React 元件顯示（PatientHeader, PreventiveCare, VisitHistory...）
 ## 相關文件
 
 - **使用手冊**：[USER_MANUAL.md](./USER_MANUAL.md)
-- **資料庫架構文件**：[database_schema.md](./database_schema.md)
 - **變更日誌**：[CHANGELOG.md](./CHANGELOG.md)
 
 ---
