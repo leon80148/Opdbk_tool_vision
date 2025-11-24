@@ -146,12 +146,30 @@
 #### 方法一：使用預編譯版本（推薦）
 
 1. 下載安裝程式（`診所掛號助手-Setup-x.x.x.exe`）
-2. 執行安裝程式
-3. 選擇安裝目錄
-4. 完成安裝後，編輯設定檔（見下方「設定說明」）
-   - **重要**：修改 `[clinic] name` 為您的診所名稱
-   - **重要**：修改 `[database] dbf_root` 為您的 HIS 資料路徑
-5. 啟動應用程式
+2. 執行安裝程式，選擇安裝目錄
+   - 建議：預設目錄或 `C:\ClinicAssistant\`（避免系統保護目錄）
+3. 首次啟動，程式會自動建立 `config.ini`
+4. **必須修改設定檔**：
+   ```ini
+   [clinic]
+   name = 您的診所名稱
+
+   [database]
+   dbf_root = D:\\HIS\\DBF\\  # 改成您的 HIS 資料路徑
+   ```
+5. 重新啟動應用程式
+
+**安裝後目錄結構**：
+```
+{安裝目錄}\
+├── 診所掛號助手.exe      # 主程式
+├── config.ini            # 設定檔（首次啟動自動建立）
+├── data\                 # 快取資料庫
+├── logs\                 # 日誌檔案
+└── resources\            # 應用程式資源
+```
+
+**快速找到設定檔**：按 `Win + R`，輸入 `%LOCALAPPDATA%\Programs\診所掛號助手`
 
 #### 方法二：從原始碼編譯
 
@@ -466,11 +484,8 @@ React 元件顯示（PatientHeader, PreventiveCare, VisitHistory...）
 ## 相關文件
 
 - **使用手冊**：[USER_MANUAL.md](./USER_MANUAL.md)
-- **開發指南**：[CLAUDE.md](./CLAUDE.md)（給 AI 助手的詳細技術文件）
-- **產品需求文件**：[OPD_TOOLIT_PRD.MD](./OPD_TOOLIT_PRD.MD)
 - **資料庫架構文件**：[database_schema.md](./database_schema.md)
 - **變更日誌**：[CHANGELOG.md](./CHANGELOG.md)
-- **設定檔範例**：[config.ini.example](./config.ini.example)
 
 ---
 
