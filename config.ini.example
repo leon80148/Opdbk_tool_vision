@@ -1,13 +1,28 @@
 # ============================================================================
-# 診所櫃檯智慧助手 (Clinic Reception Assistant) - 設定檔範例
+# 安家診所掛號助手 - 設定檔範例
 # ============================================================================
-# 版本: v3.0
-# 最後更新: 2025-11-22
+# 版本: v4.4
+# 最後更新: 2025-11-23
 #
 # 使用說明:
-# 1. 複製本檔案為 config.ini（與主程式執行檔同層）
-# 2. 依據診所實際環境修改各項設定
-# 3. 修改完成後重新啟動程式
+# 1. 首次啟動時，程式會自動將此檔案複製為 config.ini
+# 2. config.ini 位置：與主程式執行檔同層（安裝目錄下）
+# 3. 依據診所實際環境修改各項設定
+# 4. 修改完成後重新啟動程式
+#
+# 檔案結構（所有檔案都在安裝目錄下）:
+#   安家診所掛號助手\
+#   ├── 安家診所掛號助手.exe
+#   ├── config.ini              ← 主設定檔
+#   ├── data\                   ← 資料庫檔案（預設位置）
+#   │   └── lab_cache.db
+#   ├── logs\                   ← 日誌檔案
+#   │   ├── app.log
+#   │   └── error.log
+#   └── resources\              ← 應用程式資源
+#       └── config\
+#           ├── lab_codes.json
+#           └── rules.json
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -17,12 +32,15 @@
 # DBF 資料庫根目錄（HIS 系統資料所在位置）
 # 注意：Windows 路徑需使用雙反斜線 \\ 或單斜線 /
 # 範例：D:\\HIS\\DBF\\ 或 D:/HIS/DBF/
+# ⚠️ 請修改為您的實際 HIS 資料庫路徑
 dbf_root = D:\\HIS\\DBF\\
 
 # SQLite 快取資料庫檔案路徑
-# 用於儲存從 CO18H 轉置後的檢驗寬表，加速查詢
+# 預設：安裝目錄下的 data\\lab_cache.db（程式會自動建立）
+# 如果需要放在其他位置，請修改此路徑
 # 建議放置於 SSD 硬碟以提升效能
-sqlite_path = C:\\ClinicAssistant\\data\\lab_cache.db
+# 預設值會在啟動時自動設定為：{安裝目錄}\\data\\lab_cache.db
+sqlite_path = .\\data\\lab_cache.db
 
 # DBF 連線方式（可選）
 # 選項：odbc（推薦，適用於 Visual FoxPro）、dbf-parser（純 Node.js，可能不支援所有格式）
@@ -38,18 +56,30 @@ connection_mode = odbc
 # 預設：big5
 encoding = big5
 
+# 預載入歷史資料年數（影響記憶體占用）
+# 啟動時會預載入最近 N 年的資料到記憶體中
+# 建議：3 年（~150-200MB）/ 5 年（~300-400MB）/ 10 年（~500MB+）
+# 預設：3
+preload_years_back = 3
+
 # ----------------------------------------------------------------------------
 # [hotkey] 全域熱鍵設定
 # ----------------------------------------------------------------------------
 [hotkey]
-# 全域熱鍵組合（用於從任何畫面喚出助手）
-# 格式：Modifier+Modifier+Key
+# 縮放視窗熱鍵（用於從任何畫面喚出/隱藏助手視窗）
+# 格式：Modifier+Key 或 Modifier+Modifier+Key
 # 可用修飾鍵：Ctrl, Alt, Shift, Win（Windows 鍵）
 # 範例：
-#   - Ctrl+Alt+C（預設）
+#   - Ctrl+1（預設）
+#   - Ctrl+Alt+C
 #   - Ctrl+Shift+H
 #   - Alt+F12
-global = Ctrl+Alt+C
+global = Ctrl+1
+
+# 查詢熱鍵（自動抓取剪貼簿中的病歷號並查詢）
+# 當按下此熱鍵時，會自動從剪貼簿讀取病歷號或身分證號並查詢
+# 預設：Ctrl+2
+capture = Ctrl+2
 
 # 熱鍵衝突處理
 # 選項：warn（顯示警告但仍嘗試註冊）、fail（註冊失敗時中止啟動）、ignore（忽略註冊失敗）
@@ -57,12 +87,13 @@ global = Ctrl+Alt+C
 conflict_handling = warn
 
 # ----------------------------------------------------------------------------
-# [labs] 檢驗項目設定
+# [labs] 檢驗項目設定（已停用，保留供未來使用）
 # ----------------------------------------------------------------------------
 [labs]
 # LabCodeMap 檔案位置（JSON 格式）
+# 預設：resources\\config\\lab_codes.json（程式會自動設定）
 # 定義檢驗項目代碼與顯示名稱、正常值範圍、警示閾值的對應關係
-lab_code_map = C:\\ClinicAssistant\\config\\lab_codes.json
+lab_code_map = .\\resources\\config\\lab_codes.json
 
 # 檢驗數據保留期限（單位：年）
 # 初始匯入時只匯入最近 N 年的檢驗資料，避免資料量過大
@@ -109,12 +140,13 @@ retry_interval_seconds = 30
 batch_size = 5000
 
 # ----------------------------------------------------------------------------
-# [rules] 規則引擎設定
+# [rules] 規則引擎設定（已停用，保留供未來使用）
 # ----------------------------------------------------------------------------
 [rules]
 # Smart Action List 規則定義檔案
 # JSON 格式，定義衛教提醒、檢查追蹤等規則
-rules_definition = C:\\ClinicAssistant\\config\\rules.json
+# 預設：resources\\config\\rules.json（程式會自動設定）
+rules_definition = .\\resources\\config\\rules.json
 
 # 規則評估快取時間（單位：秒）
 # 同一病患的規則評估結果會快取 N 秒，避免重複計算
@@ -178,8 +210,9 @@ auto_pad_patient_id = true
 log_level = info
 
 # 日誌檔案路徑
+# 預設：安裝目錄下的 logs\\app.log（程式會自動設定）
 # 若留空，日誌僅輸出到控制台
-log_file = C:\\ClinicAssistant\\logs\\app.log
+log_file = .\\logs\\app.log
 
 # 日誌檔案大小上限（MB）
 # 超過上限後會自動切割

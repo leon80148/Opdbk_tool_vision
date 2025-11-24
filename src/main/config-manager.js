@@ -10,17 +10,21 @@ const logger = require('./logger');
  */
 class ConfigManager {
   constructor(configPath = null) {
-    // 打包後使用 userData 目錄，開發時使用專案根目錄
-    const userDataPath = app ? app.getPath('userData') : __dirname;
+    // 取得應用程式根目錄（打包後使用安裝目錄，開發時使用專案根目錄）
+    const appRoot = app && app.isPackaged
+      ? path.dirname(app.getPath('exe'))
+      : path.join(__dirname, '../..');
+
     const defaultConfigPath = app.isPackaged
-      ? path.join(userDataPath, 'config.ini')
+      ? path.join(appRoot, 'config.ini')
       : path.join(__dirname, '../../config.ini');
 
     this.configPath = configPath || defaultConfigPath;
     this.exampleConfigPath = app.isPackaged
-      ? path.join(path.dirname(app.getPath('exe')), 'resources', 'config.ini.example')
+      ? path.join(appRoot, 'resources', 'config.ini.example')
       : path.join(__dirname, '../../config.ini.example');
 
+    this.appRoot = appRoot; // 儲存根目錄供後續使用
     this.config = null;
     this.defaults = this.getDefaultConfig();
   }
@@ -29,23 +33,23 @@ class ConfigManager {
    * 取得預設設定
    */
   getDefaultConfig() {
-    // 打包後使用 userData 或安裝目錄，開發時使用專案目錄
-    const userDataPath = app ? app.getPath('userData') : __dirname;
+    // 使用應用程式根目錄（所有檔案都放在安裝目錄下）
+    const appRoot = this.appRoot;
     const resourcesPath = app && app.isPackaged
-      ? path.join(path.dirname(app.getPath('exe')), 'resources')
-      : path.join(__dirname, '../..');
+      ? path.join(appRoot, 'resources')
+      : appRoot;
 
     return {
       database: {
-        dbf_root: path.join(userDataPath, 'data'),
-        sqlite_path: path.join(userDataPath, 'data', 'lab_cache.db'),
+        dbf_root: path.join(appRoot, 'data'),
+        sqlite_path: path.join(appRoot, 'data', 'lab_cache.db'),
         connection_mode: 'odbc',
         encoding: 'big5',
         preload_years_back: 3,
       },
       hotkey: {
-        global: 'Ctrl+Alt+C',
-        capture: 'Ctrl+Alt+G',
+        global: 'Ctrl+1',
+        capture: 'Ctrl+2',
         conflict_handling: 'warn',
       },
       labs: {
@@ -76,7 +80,7 @@ class ConfigManager {
       },
       logging: {
         log_level: 'info',
-        log_file: path.join(userDataPath, 'logs', 'app.log'),
+        log_file: path.join(appRoot, 'logs', 'app.log'),
         log_max_size_mb: 10,
         log_max_files: 5,
         mask_sensitive_data: true,

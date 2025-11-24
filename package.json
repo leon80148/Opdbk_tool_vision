@@ -55,9 +55,10 @@
       "output": "dist"
     },
     "files": [
-      "src/main/**/*",
+      "src/**/*",
       "dist-renderer/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "!src/renderer/**/*"
     ],
     "extraResources": [
       {
@@ -73,13 +74,15 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/icon.ico"
+      "icon": "public/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "perMachine": false
     }
   }
 }

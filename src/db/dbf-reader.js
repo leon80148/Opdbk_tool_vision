@@ -18,7 +18,8 @@ class DBFReader {
     this.isPreloaded = false;
 
     // 定義需要預載入的表格（所有常用表格）
-    this.preloadTables = ['CO01M', 'CO02M', 'CO02F', 'CO03M', 'CO03L', 'co05b'];
+    // CO03M 已移除以減少記憶體占用（帳務/就診記錄，ClinicalJourney 功能已停用）
+    this.preloadTables = ['CO01M', 'CO02M', 'CO02F', 'CO03L', 'co05b'];
 
     // 預載入資料範圍設定（只載入近期資料，減少記憶體占用）
     this.preloadYearsBack = config.performance?.preload_years_back || 3; // 預設載入最近 3 年
@@ -71,10 +72,10 @@ class DBFReader {
     const dateFields = {
       'CO02M': 'IDATE',
       'CO02F': 'FDATE',
-      'CO03M': 'IDATE',
       'CO03L': 'DATE',
       'co05b': 'TBKDT'
       // CO01M 沒有日期欄位，載入全部
+      // CO03M 已移除（功能已停用）
     };
 
     const totalTables = this.preloadTables.length;
@@ -240,21 +241,20 @@ class DBFReader {
 
   /**
    * 查詢診療歷程
+   * 注意：CO03M（帳務記錄）已移除預載入以減少記憶體占用
+   * ClinicalJourney 功能已停用，此函數保留供未來使用
    */
   async queryClinicalHistory(patientId) {
-    // 最近就診（從 CO03M）
-    const co03mRecords = await this.openAndReadDBF('CO03M');
-
-    const patientVisits = co03mRecords
-      .filter(r => r.KCSTMR?.trim() === patientId)
-      .sort((a, b) => {
-        // 按日期時間排序（降序）
-        const dateCompare = (b.IDATE || '').localeCompare(a.IDATE || '');
-        if (dateCompare !== 0) return dateCompare;
-        return (b.ITIME || '').localeCompare(a.ITIME || '');
-      });
-
-    const lastVisit = patientVisits[0] || null;
+    // 最近就診（從 CO03M）- 已停用以減少記憶體占用
+    // const co03mRecords = await this.openAndReadDBF('CO03M');
+    // const patientVisits = co03mRecords
+    //   .filter(r => r.KCSTMR?.trim() === patientId)
+    //   .sort((a, b) => {
+    //     const dateCompare = (b.IDATE || '').localeCompare(a.IDATE || '');
+    //     if (dateCompare !== 0) return dateCompare;
+    //     return (b.ITIME || '').localeCompare(a.ITIME || '');
+    //   });
+    // const lastVisit = patientVisits[0] || null;
 
     // 最近領藥（從 CO02M）
     const co02mRecords = await this.openAndReadDBF('CO02M');
@@ -270,7 +270,7 @@ class DBFReader {
     const lastMedication = patientMedications[0] || null;
 
     return {
-      lastVisit,
+      lastVisit: null, // 已停用 CO03M 查詢
       lastMedication,
     };
   }

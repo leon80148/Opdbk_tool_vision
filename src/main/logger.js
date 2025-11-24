@@ -4,8 +4,12 @@ const fs = require('fs');
 const { app } = require('electron');
 
 // 確保 logs 目錄存在
-// 使用 userData 目錄而非 __dirname，以支援打包後的應用程式
-const logsDir = app ? path.join(app.getPath('userData'), 'logs') : path.join(__dirname, '../../logs');
+// 打包後使用安裝目錄，開發時使用專案根目錄
+const appRoot = app && app.isPackaged
+  ? path.dirname(app.getPath('exe'))
+  : path.join(__dirname, '../..');
+const logsDir = path.join(appRoot, 'logs');
+
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
