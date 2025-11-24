@@ -19,6 +19,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [dbReady, setDbReady] = useState(false); // 資料庫是否載入完成
   const [settingsVisible, setSettingsVisible] = useState(false); // 設定對話框顯示狀態
+  const [clinicName, setClinicName] = useState('診所掛號助手'); // 診所名稱（從設定讀取）
 
   /**
    * 處理病患查詢（使用 useCallback 避免閉包問題）
@@ -43,6 +44,23 @@ function App() {
       setLoading(false);
     }
   }, []); // 空依賴數組，因為只使用 setState
+
+  // 載入設定（包含診所名稱）
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.getConfig) {
+          const config = await window.electronAPI.getConfig();
+          if (config?.clinic?.name) {
+            setClinicName(config.clinic.name);
+          }
+        }
+      } catch (error) {
+        console.error('[App] Failed to load config:', error);
+      }
+    };
+    loadConfig();
+  }, []);
 
   // 監聽資料庫初始化進度
   useEffect(() => {
@@ -110,7 +128,7 @@ function App() {
   return (
     <Layout className="app-layout">
       <Header className="app-header">
-        <div className="header-title">安家診所掛號助手</div>
+        <div className="header-title">{clinicName}</div>
         <Space size="middle" className="header-actions">
           <Button
             type="text"

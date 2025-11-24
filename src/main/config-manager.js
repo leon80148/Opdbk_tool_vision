@@ -40,6 +40,9 @@ class ConfigManager {
       : appRoot;
 
     return {
+      clinic: {
+        name: '診所掛號助手',
+      },
       database: {
         dbf_root: path.join(appRoot, 'data'),
         sqlite_path: path.join(appRoot, 'data', 'lab_cache.db'),
