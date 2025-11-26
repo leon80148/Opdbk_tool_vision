@@ -27,6 +27,28 @@ class DBFReader {
     // 快取預防保健日期計算（每日更新）
     this.cachedFiveYearsAgoStr = null;
     this.cachedFiveYearsAgoDate = null;
+
+    // 單表快取機制（用於動態補充的資料）
+    this.supplementCache = new Map();
+    this.supplementCacheTTL = 5 * 60 * 1000; // 5 分鐘 TTL
+  }
+
+  /**
+   * 取得表格的日期欄位名稱
+   * @param {string} tableName - 表格名稱
+   * @returns {string|null} - 日期欄位名稱，無則返回 null
+   */
+  getDateFieldForTable(tableName) {
+    const dateFields = {
+      'CO02M': 'IDATE',
+      'CO02F': 'FDATE',
+      'CO03L': 'DATE',
+      'co05b': 'TBKDT',
+      'CO05O': 'TBKDATE'
+      // CO01M 沒有日期欄位
+    };
+
+    return dateFields[tableName] || null;
   }
 
   /**
@@ -68,16 +90,6 @@ class DBFReader {
 
     const startTime = Date.now();
 
-    // 定義每個表格的日期欄位
-    const dateFields = {
-      'CO02M': 'IDATE',
-      'CO02F': 'FDATE',
-      'CO03L': 'DATE',
-      'co05b': 'TBKDT'
-      // CO01M 沒有日期欄位，載入全部
-      // CO03M 已移除（功能已停用）
-    };
-
     const totalTables = this.preloadTables.length;
     let currentTableIndex = 0;
 
@@ -103,7 +115,7 @@ class DBFReader {
 
         // 如果有日期欄位且不是載入全部，只保留近期資料
         let records = allRecords;
-        const dateField = dateFields[tableName];
+        const dateField = this.getDateFieldForTable(tableName);
         if (dateField && !loadAll) {
           const beforeFilter = allRecords.length;
           records = allRecords.filter(r => {
@@ -142,6 +154,25 @@ class DBFReader {
   }
 
   /**
+   * 取得 N 年前的日期（民國年格式 YYYMMDD）
+   * @param {number} years - 年數（例如 5 代表五年前）
+   * @returns {string} - 民國年日期字串 (YYYMMDD)
+   */
+  getYearsAgoStr(years) {
+    const today = new Date();
+    const targetDate = new Date();
+    targetDate.setFullYear(today.getFullYear() - years);
+
+    const rocYear = targetDate.getFullYear() - 1911;
+    const yearsAgoStr =
+      String(rocYear).padStart(3, '0') +
+      String(targetDate.getMonth() + 1).padStart(2, '0') +
+      String(targetDate.getDate()).padStart(2, '0');
+
+    return yearsAgoStr;
+  }
+
+  /**
    * 取得五年前的日期（民國年格式 YYYMMDD）
    * 快取計算結果，每日只計算一次
    */
@@ -154,14 +185,8 @@ class DBFReader {
       return this.cachedFiveYearsAgoStr;
     }
 
-    // 計算五年前的日期
-    const fiveYearsAgo = new Date();
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    const rocYear = fiveYearsAgo.getFullYear() - 1911;
-    const fiveYearsAgoStr =
-      String(rocYear).padStart(3, '0') +
-      String(fiveYearsAgo.getMonth() + 1).padStart(2, '0') +
-      String(fiveYearsAgo.getDate()).padStart(2, '0');
+    // 使用泛化函數計算（避免重複邏輯）
+    const fiveYearsAgoStr = this.getYearsAgoStr(5);
 
     // 更新快取
     this.cachedFiveYearsAgoStr = fiveYearsAgoStr;
@@ -172,16 +197,74 @@ class DBFReader {
 
   /**
    * 開啟 DBF 檔案並讀取所有記錄（優先使用預載入資料）
+   * @param {string} tableName - 表格名稱
+   * @param {number} requiredYearsBack - 需要的資料年數（可選）
+   * @returns {Promise<Array>} - 記錄陣列
    */
-  async openAndReadDBF(tableName) {
+  async openAndReadDBF(tableName, requiredYearsBack = null) {
     const startTime = Date.now();
 
-    // 如果已預載入，直接從記憶體返回
+    // 如果已預載入，檢查是否需要補充資料
     if (this.isPreloaded && this.preloadedData.has(tableName)) {
-      const records = this.preloadedData.get(tableName);
-      const elapsed = Date.now() - startTime;
-      logger.debug(`[PERF] ${tableName} - Memory HIT (${records.length} records) - ${elapsed}ms`);
-      return records;
+      const preloadedRecords = this.preloadedData.get(tableName);
+
+      // 如果不需要檢查年數，或需求年數在預載入範圍內，直接返回
+      if (requiredYearsBack === null || requiredYearsBack <= this.preloadYearsBack) {
+        const elapsed = Date.now() - startTime;
+        logger.debug(`[PERF] ${tableName} - Memory HIT (${preloadedRecords.length} records) - ${elapsed}ms`);
+        return preloadedRecords;
+      }
+
+      // 需要補充更早的資料
+      logger.info(`[SUPPLEMENT] ${tableName} needs ${requiredYearsBack} years but only ${this.preloadYearsBack} years preloaded, reading additional data from disk`);
+
+      // 檢查快取
+      const cacheKey = `${tableName}_${requiredYearsBack}y`;
+      const cachedData = this.supplementCache.get(cacheKey);
+
+      if (cachedData && Date.now() - cachedData.timestamp < this.supplementCacheTTL) {
+        const elapsed = Date.now() - startTime;
+        logger.debug(`[CACHE] ${tableName} (${requiredYearsBack}y) - Supplement CACHE HIT (${cachedData.records.length} records) - ${elapsed}ms`);
+        return cachedData.records;
+      }
+
+      // 計算需要補充的時間範圍
+      const supplementStartDate = this.getYearsAgoStr(requiredYearsBack);
+
+      try {
+        // 從磁碟讀取全部資料
+        const allRecords = await this.readDBFFromDisk(tableName);
+
+        // 取得該表的日期欄位
+        const dateField = this.getDateFieldForTable(tableName);
+
+        if (!dateField) {
+          // 無日期欄位的表格，返回全部記錄
+          logger.debug(`[SUPPLEMENT] ${tableName} has no date field, using all records`);
+          return allRecords;
+        }
+
+        // 過濾出需要的範圍（requiredYearsBack 年內的資料）
+        const filteredRecords = allRecords.filter(r => {
+          const recordDate = r[dateField]?.trim() || '';
+          return recordDate >= supplementStartDate;
+        });
+
+        // 存入快取（5 分鐘 TTL）
+        this.supplementCache.set(cacheKey, {
+          records: filteredRecords,
+          timestamp: Date.now()
+        });
+
+        const elapsed = Date.now() - startTime;
+        logger.info(`[SUPPLEMENT] ${tableName} - Loaded ${filteredRecords.length} records (${requiredYearsBack} years) from disk in ${elapsed}ms`);
+
+        return filteredRecords;
+      } catch (error) {
+        logger.error(`[SUPPLEMENT] Failed to read ${tableName} from disk, falling back to preloaded data:`, error);
+        logger.warn(`[SUPPLEMENT] Using ${this.preloadYearsBack} years data instead of ${requiredYearsBack} years due to read failure`);
+        return preloadedRecords; // 降級使用預載入資料
+      }
     }
 
     // 如果未預載入，從磁碟讀取（備用方案）
@@ -463,13 +546,14 @@ class DBFReader {
   }
 
   /**
-   * 查詢預防保健紀錄（從 CO05O）
-   * 根據卡序(tisrs)查詢特定類型的預防保健紀錄
+   * 查詢預防保健紀錄（從 CO03L）
+   * 根據卡序(lisrs)查詢特定類型的預防保健紀錄
    * 只返回五年內的紀錄
    */
   async queryPreventiveCareRecords(patientId) {
     try {
-      const records = await this.openAndReadDBF('CO05O');
+      // 使用 CO03L（已預載入），指定需要 5 年資料
+      const records = await this.openAndReadDBF('CO03L', 5);
 
       // 定義所有預防保健項目的卡序
       const preventiveCareCardSequences = [
@@ -492,26 +576,26 @@ class DBFReader {
           if (r.KCSTMR?.trim() !== patientId) return false;
 
           // 必須是預防保健相關的卡序
-          const tisrs = r.TISRS?.trim();
-          if (!tisrs || !preventiveCareCardSequences.includes(tisrs)) return false;
-
-          // 必須有完診時間（過濾掛號錯誤或未完診的記錄）
-          const tendtime = r.TENDTIME?.trim() || '';
-          if (!tendtime || tendtime === '000000') return false;
+          // 注意：CO03L 使用 LISRS 欄位（不是 TISRS）
+          const lisrs = r.LISRS?.trim();
+          if (!lisrs || !preventiveCareCardSequences.includes(lisrs)) return false;
 
           // 必須是五年內的紀錄（民國年格式比較）
-          const recordDate = r.TBKDATE?.trim() || '';
+          // 注意：CO03L 使用 DATE 欄位（不是 TBKDATE）
+          const recordDate = r.DATE?.trim() || '';
           return recordDate >= fiveYearsAgoStr;
         })
         .sort((a, b) => {
           // 按就診日期排序（降序 - 最新的在前）
-          const dateCompare = (b.TBKDATE || '').localeCompare(a.TBKDATE || '');
+          const dateCompare = (b.DATE || '').localeCompare(a.DATE || '');
           if (dateCompare !== 0) return dateCompare;
 
-          // 相同日期則按掛號時間排序
-          return (b.TBKTIME || '').localeCompare(a.TBKTIME || '');
+          // 相同日期則按時間排序
+          // 注意：CO03L 使用 TIME 欄位（不是 TBKTIME）
+          return (b.TIME || '').localeCompare(a.TIME || '');
         });
 
+      logger.info(`[PREVENTIVE] Found ${preventiveRecords.length} preventive care records for patient ${patientId} (5 years)`);
       return preventiveRecords;
     } catch (error) {
       logger.error(`Failed to query preventive care records for patient ${patientId}:`, error);
