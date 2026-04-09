@@ -103,3 +103,7 @@ database_schema.md
 # Tests (development only)
 # ============================================================================
 tests/
+
+# Added by automated healthcheck
+.next/
+.nuxt/
