@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const ini = require('ini');
-const { app } = require('electron');
+const app = require('./electron-app');
 const logger = require('./logger');
 
 /**
@@ -15,12 +15,12 @@ class ConfigManager {
       ? path.dirname(app.getPath('exe'))
       : path.join(__dirname, '../..');
 
-    const defaultConfigPath = app.isPackaged
+    const defaultConfigPath = app && app.isPackaged
       ? path.join(appRoot, 'config.ini')
       : path.join(__dirname, '../../config.ini');
 
     this.configPath = configPath || defaultConfigPath;
-    this.exampleConfigPath = app.isPackaged
+    this.exampleConfigPath = app && app.isPackaged
       ? path.join(appRoot, 'resources', 'config.ini.example')
       : path.join(__dirname, '../../config.ini.example');
 
@@ -120,6 +120,7 @@ class ConfigManager {
 
         // 合併預設值與載入的設定
         this.config = this.mergeConfig(this.defaults, parsedConfig);
+        this.resolveConfiguredPaths(this.config);
 
         logger.info('Config loaded successfully');
       } else {
@@ -203,6 +204,50 @@ class ConfigManager {
     return merged;
   }
 
+  resolveConfiguredPaths(config) {
+    const pathFields = [
+      ['database', 'dbf_root'],
+      ['database', 'sqlite_path'],
+      ['labs', 'lab_code_map'],
+      ['rules', 'rules_definition'],
+      ['logging', 'log_file'],
+    ];
+
+    for (const [section, key] of pathFields) {
+      const value = config?.[section]?.[key];
+      if (typeof value === 'string' && value.trim() !== '') {
+        config[section][key] = this.normalizeConfigPath(value);
+      }
+    }
+  }
+
+  normalizeConfigPath(value) {
+    const trimmed = value.trim();
+
+    if (/^[A-Za-z]:[\\/]/.test(trimmed)) {
+      return trimmed;
+    }
+
+    const normalized = trimmed.replace(/\\/g, path.sep);
+    const resolved = path.isAbsolute(normalized)
+      ? path.normalize(normalized)
+      : path.normalize(path.resolve(this.appRoot, normalized));
+
+    if (fs.existsSync(resolved)) {
+      return resolved;
+    }
+
+    const legacyResourcesPath = `${path.sep}resources${path.sep}config${path.sep}`;
+    if (resolved.includes(legacyResourcesPath)) {
+      const migrated = resolved.replace(legacyResourcesPath, `${path.sep}config${path.sep}`);
+      if (fs.existsSync(migrated)) {
+        return migrated;
+      }
+    }
+
+    return resolved;
+  }
+
   /**
    * 驗證設定
    */
@@ -272,6 +317,7 @@ class ConfigManager {
 
         // 合併預設值與載入的設定
         this.config = this.mergeConfig(this.defaults, parsedConfig);
+        this.resolveConfiguredPaths(this.config);
 
         logger.info('Config reloaded successfully');
       } else {

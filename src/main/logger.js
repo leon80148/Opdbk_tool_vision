@@ -1,7 +1,7 @@
 const winston = require('winston');
 const path = require('path');
 const fs = require('fs');
-const { app } = require('electron');
+const app = require('./electron-app');
 
 // 確保 logs 目錄存在
 // 打包後使用安裝目錄，開發時使用專案根目錄
